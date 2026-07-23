@@ -1,0 +1,215 @@
+// ====================================================================
+// ELEVATE database schema
+// Designed to start with individual athletes and expand cleanly to
+// teams, coaches, recruiters, and multiple sports later.
+// ====================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- Auth / account -------------------------------------------------
+
+model User {
+  id            String   @id @default(cuid())
+  name          String?
+  email         String   @unique
+  passwordHash  String?  // null for OAuth-only users (future)
+  image         String?
+  emailVerified DateTime?
+
+  role          Role     @default(ATHLETE)
+  plan          Plan     @default(FREE)
+
+  // Stripe billing
+  stripeCustomerId       String?  @unique
+  stripeSubscriptionId   String?  @unique
+  planRenewsAt           DateTime?
+
+  athleteProfile AthleteProfile?
+  matches        Match[]
+  accounts       Account[]
+  sessions       Session[]
+
+  // Future team support: a user can belong to an organization.
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum Role {
+  ATHLETE
+  COACH      // future: coach dashboards
+  RECRUITER  // future: recruiter views
+  ADMIN
+}
+
+enum Plan {
+  FREE
+  PRO
+  TEAM
+}
+
+// One athlete profile per user. Remembers defaults so returning users
+// don't re-enter jersey/position every upload.
+model AthleteProfile {
+  id              String  @id @default(cuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  sport           String  @default("volleyball") // future: multi-sport
+  position        String? // Outside Hitter, Opposite, Setter, Middle Blocker, Libero
+  defaultJersey   String?
+  teamName        String?
+  heightCm        Int?
+  dominantHand    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Future: team accounts, coach dashboards, recruiter access all hang
+// off Organization.
+model Organization {
+  id        String  @id @default(cuid())
+  name      String
+  sport     String  @default("volleyball")
+  plan      Plan    @default(TEAM)
+  members   User[]
+  createdAt DateTime @default(now())
+}
+
+// --- Matches & analysis ---------------------------------------------
+
+model Match {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  title         String
+  opponent      String?
+  playedAt      DateTime?
+
+  // Upload / video
+  videoUrl      String?  // storage/Mux playback URL
+  videoAssetId  String?  // Mux asset id, if used
+  durationSec   Int?
+
+  // Player identification (captured before analysis begins)
+  jerseyNumber  String?
+  position      String?
+  // Where the user tapped themselves on the first frame (normalized 0..1).
+  // A real CV backend uses this as the seed for player tracking.
+  selectionX    Float?
+  selectionY    Float?
+
+  status        MatchStatus @default(UPLOADED)
+
+  stats         Stat?
+  highlights    Highlight[]
+  report        CoachingReport?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, createdAt])
+}
+
+enum MatchStatus {
+  UPLOADED
+  IDENTIFYING   // player-identification step
+  ANALYZING
+  COMPLETE
+  FAILED
+}
+
+// Per-match statistics produced by the analysis provider.
+model Stat {
+  id         String @id @default(cuid())
+  matchId    String @unique
+  match      Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  kills      Int    @default(0)
+  blocks     Int    @default(0)
+  digs       Int    @default(0)
+  aces       Int    @default(0)
+  assists    Int    @default(0)
+  errors     Int    @default(0)
+  serves     Int    @default(0)
+  attackPct  Float  @default(0)
+  servePct   Float  @default(0)
+  rating     Int    @default(0) // 0..100 AI match rating
+
+  // Skill radar (0..100 each)
+  radarAttack   Int @default(0)
+  radarServe    Int @default(0)
+  radarBlock    Int @default(0)
+  radarDig      Int @default(0)
+  radarSet      Int @default(0)
+  radarMovement Int @default(0)
+}
+
+model Highlight {
+  id         String @id @default(cuid())
+  matchId    String
+  match      Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  category   String // Kills, Aces, Blocks, Rallies
+  label      String
+  startSec   Float
+  endSec     Float
+  clipUrl    String?
+  thumbUrl   String?
+}
+
+model CoachingReport {
+  id         String @id @default(cuid())
+  matchId    String @unique
+  match      Match  @relation(fields: [matchId], references: [id], onDelete: Cascade)
+
+  summary    String  @db.Text
+  strengths  String[] // "keep doing"
+  weaknesses String[] // "work on"
+  createdAt  DateTime @default(now())
+}
+
+// --- NextAuth adapter tables ----------------------------------------
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+  @@unique([identifier, token])
+}

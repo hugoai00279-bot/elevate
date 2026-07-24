@@ -7,17 +7,22 @@ import { Check } from "lucide-react";
 const plans = [
   {
     key: "FREE", name: "Free", price: 0,
-    features: ["1 match analysis / month", "Basic stats", "Community support"],
+    features: ["1 match / month", "Basic stats & AI rating", "Community support"],
     cta: "Get started",
   },
   {
-    key: "PRO", name: "Pro", price: 7.99, highlight: true,
-    features: ["Unlimited match analysis", "Full stats, heat maps & shot charts", "AI coaching reports", "Highlight reels", "Season progress tracking"],
+    key: "STARTER", name: "Starter", price: 12.99,
+    features: ["1 full analysis / month", "Heat maps & shot charts", "AI coaching reports", "Highlight reels", "Extra matches $7.50 each"],
+    cta: "Choose Starter",
+  },
+  {
+    key: "PRO", name: "Pro", price: 29.99, highlight: true,
+    features: ["4 full analyses / month", "Everything in Starter", "Season progress tracking", "Priority processing", "Extra matches $7.50 each"],
     cta: "Upgrade to Pro",
   },
   {
-    key: "TEAM", name: "Team", price: 24.99,
-    features: ["Everything in Pro", "Up to 15 athletes", "Coach dashboard", "Team-wide comparisons", "Priority support"],
+    key: "TEAM", name: "Team", price: 59.99,
+    features: ["10 shared analyses / month", "Up to 15 athletes", "Coach dashboard", "Team-wide comparisons", "Priority support"],
     cta: "Upgrade to Team",
   },
 ];
@@ -58,7 +63,7 @@ export default function PricingPage() {
       <h1 className="text-4xl font-semibold tracking-tight text-center">Simple, honest pricing</h1>
       <p className="text-brand-muted text-center mt-4">Start free. Upgrade when you&apos;re ready.</p>
 
-      <div className="grid md:grid-cols-3 gap-6 mt-14">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-14">
         {plans.map((p) => (
           <div key={p.key}
             className="card p-7 flex flex-col"
@@ -71,7 +76,7 @@ export default function PricingPage() {
             )}
             <h3 className="text-lg font-semibold">{p.name}</h3>
             <div className="mt-2 mb-5">
-              <span className="text-4xl font-semibold">${p.price}</span>
+              <span className="text-4xl font-semibold">${p.price % 1 === 0 ? p.price : p.price.toFixed(2)}</span>
               <span className="text-brand-muted text-sm">/month</span>
             </div>
             <ul className="space-y-2.5 mb-7 flex-1">
@@ -91,7 +96,11 @@ export default function PricingPage() {
           </div>
         ))}
       </div>
-      <p className="text-center text-xs text-brand-faint mt-8">
+      <p className="text-center text-sm text-brand-muted mt-8 max-w-lg mx-auto">
+        Need more than your plan includes? Analyze extra matches anytime for
+        <strong className="text-brand-ink"> $7.50 each</strong> — no need to upgrade.
+      </p>
+      <p className="text-center text-xs text-brand-faint mt-3">
         Payments are processed securely by Stripe. Cancel anytime.
       </p>
     </div>

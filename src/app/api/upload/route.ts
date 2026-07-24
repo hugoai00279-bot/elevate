@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { getEffectivePlan, PLAN_LIMITS } from "@/lib/plan";
+import { getUsageStatus } from "@/lib/usage";
+import { EXTRA_MATCH_PRICE } from "@/lib/plan";
 
 // ====================================================================
 // UPLOAD ENDPOINT
@@ -12,39 +13,37 @@ import { getEffectivePlan, PLAN_LIMITS } from "@/lib/plan";
 // If MUX credentials are absent, we return a dev fallback so the flow
 // still works locally without a video host.
 //
-// Plan enforcement: Free-tier accounts are limited to a set number of
-// matches per calendar month (see src/lib/plan.ts). Founder-listed
-// emails and paid plans bypass this limit.
+// Cost control: each plan includes a capped number of analyses per
+// month (see src/lib/plan.ts). Once the cap is used up, a user must
+// buy an extra-match credit (pay-per-match) before uploading more.
+// This keeps every analysis above its real cost.
 // ====================================================================
 
 export async function POST(req: Request) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  const user = await prisma.user.findUnique({ where: { id: userId } });
-  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+  const usage = await getUsageStatus(userId);
+  if (!usage) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
-  const { plan: effectivePlan } = getEffectivePlan({ email: user.email, plan: user.plan as any });
-  const limit = PLAN_LIMITS[effectivePlan].matchesPerMonth;
-
-  if (limit !== null) {
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
-
-    const matchesThisMonth = await prisma.match.count({
-      where: { userId, createdAt: { gte: startOfMonth } },
-    });
-
-    if (matchesThisMonth >= limit) {
+  if (!usage.canAnalyze) {
+    if (usage.needsExtraMatch) {
       return NextResponse.json(
         {
-          error: `You've reached the Free plan's limit of ${limit} match${limit === 1 ? "" : "es"} this month. Upgrade to Pro for unlimited uploads.`,
-          code: "PLAN_LIMIT_REACHED",
+          error: `You've used all ${usage.includedAnalyses} analyses included in your ${usage.plan} plan this month. Buy an extra match analysis for $${EXTRA_MATCH_PRICE.toFixed(2)} to continue.`,
+          code: "NEEDS_EXTRA_MATCH",
+          extraMatchPrice: EXTRA_MATCH_PRICE,
         },
-        { status: 403 }
+        { status: 402 }
       );
     }
+    return NextResponse.json(
+      {
+        error: `You've reached your ${usage.plan} plan's limit of ${usage.includedAnalyses} match${usage.includedAnalyses === 1 ? "" : "es"} this month. Upgrade for more.`,
+        code: "PLAN_LIMIT_REACHED",
+      },
+      { status: 403 }
+    );
   }
 
   const { title, opponent } = await req.json().catch(() => ({}));

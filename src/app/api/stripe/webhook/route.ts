@@ -26,12 +26,20 @@ export async function POST(req: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.metadata?.userId;
-        const plan = session.metadata?.plan;
-        if (userId && plan) {
+        const type = session.metadata?.type;
+
+        if (userId && type === "extra_match") {
+          // One-time pay-per-match purchase: grant one analysis credit.
+          await prisma.user.update({
+            where: { id: userId },
+            data: { extraMatchCredits: { increment: 1 } },
+          });
+        } else if (userId && session.metadata?.plan) {
+          // Subscription upgrade: set the user's plan.
           await prisma.user.update({
             where: { id: userId },
             data: {
-              plan: plan as any,
+              plan: session.metadata.plan as any,
               stripeSubscriptionId: (session.subscription as string) ?? null,
             },
           });

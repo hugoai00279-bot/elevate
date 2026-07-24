@@ -2,6 +2,8 @@ import Link from "next/link";
 import { Upload, TrendingUp } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getEffectivePlan } from "@/lib/plan";
+import { getUsageStatus } from "@/lib/usage";
 import { DashboardClient } from "@/components/dashboard/DashboardClient";
 
 export default async function DashboardPage() {
@@ -67,12 +69,23 @@ export default async function DashboardPage() {
     );
   }
 
+  const { plan, features } = getEffectivePlan({ email: user.email, plan: user.plan as any });
+  const usage = await getUsageStatus(user.id);
+
   return (
     <DashboardClient
       userName={user.name || "Athlete"}
       avgRating={avgRating}
       season={season}
       progress={progress}
+      plan={plan}
+      features={features}
+      usage={usage ? {
+        includedAnalyses: usage.includedAnalyses,
+        remaining: usage.remaining,
+        extraCredits: usage.extraCredits,
+        isFounder: usage.includedAnalyses > 1000,
+      } : null}
       matches={matches.map((m: MatchWithStats) => ({
         id: m.id,
         title: m.title,

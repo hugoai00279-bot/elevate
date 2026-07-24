@@ -30,7 +30,8 @@ export function UploadFlow({
 
   const [step, setStep] = useState<Step>("select");
   const [file, setFile] = useState<File | null>(null);
-  const [firstFrame, setFirstFrame] = useState<string | null>(null);
+  const [candidateFrames, setCandidateFrames] = useState<string[]>([]);
+  const [frameIndex, setFrameIndex] = useState(0);
   const [matchId, setMatchId] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
@@ -44,12 +45,34 @@ export function UploadFlow({
   const [stepIndex, setStepIndex] = useState(0);
   const [busy, setBusy] = useState(false);
   const [limitError, setLimitError] = useState<string | null>(null);
+  const [needsExtra, setNeedsExtra] = useState(false);
+  const [buyingExtra, setBuyingExtra] = useState(false);
 
-  // ---- Step 1: choose file & capture first frame -------------------
+  async function buyExtraMatch() {
+    setBuyingExtra(true);
+    try {
+      const res = await fetch("/api/extra-match", { method: "POST" });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url; // -> Stripe Checkout
+      } else {
+        setLimitError(data.error || "Couldn't start the purchase. Please try again.");
+      }
+    } catch {
+      setLimitError("Couldn't start the purchase. Please try again.");
+    } finally {
+      setBuyingExtra(false);
+    }
+  }
+
+  // ---- Step 1: choose file & capture several candidate frames ------
+  // We can't automatically detect "the frame with everyone visible"
+  // without a real computer-vision backend, so instead we sample a
+  // handful of frames spread across the first stretch of the video
+  // and let the person quickly pick the clearest one themselves.
   async function onFile(f: File) {
     setFile(f);
     setTitle(f.name.replace(/\.[^.]+$/, ""));
-    // Capture the first frame client-side for the tap step.
     try {
       const url = URL.createObjectURL(f);
       const video = document.createElement("video");
@@ -59,16 +82,29 @@ export function UploadFlow({
         video.onloadeddata = () => res();
         video.onerror = () => rej();
       });
-      video.currentTime = Math.min(1, video.duration || 1);
-      await new Promise<void>((res) => { video.onseeked = () => res(); });
+
+      const duration = video.duration || 30;
+      // Sample within the first 25% of the match (or first 60s), avoiding
+      // the very first second which is often a black/loading frame.
+      const sampleWindow = Math.min(duration * 0.25, 60);
+      const offsets = [0.05, 0.25, 0.45, 0.65, 0.9].map((p) => Math.max(1, sampleWindow * p));
+
       const canvas = document.createElement("canvas");
       canvas.width = video.videoWidth || 640;
       canvas.height = video.videoHeight || 360;
-      canvas.getContext("2d")?.drawImage(video, 0, 0, canvas.width, canvas.height);
-      setFirstFrame(canvas.toDataURL("image/jpeg", 0.8));
+      const ctx = canvas.getContext("2d");
+
+      const frames: string[] = [];
+      for (const t of offsets) {
+        video.currentTime = Math.min(t, Math.max(0, duration - 0.1));
+        await new Promise<void>((res) => { video.onseeked = () => res(); });
+        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        frames.push(canvas.toDataURL("image/jpeg", 0.8));
+      }
+      setCandidateFrames(frames);
       URL.revokeObjectURL(url);
     } catch {
-      setFirstFrame(null); // fall back to a placeholder in the tap step
+      setCandidateFrames([]); // fall back to a placeholder in the tap step
     }
     setStep("identify");
   }
@@ -77,6 +113,7 @@ export function UploadFlow({
   async function confirmIdentity() {
     setBusy(true);
     setLimitError(null);
+    setNeedsExtra(false);
     try {
       // Create the match + get upload target.
       const up = await fetch("/api/upload", {
@@ -88,6 +125,7 @@ export function UploadFlow({
 
       if (!up.ok) {
         setLimitError(upData.error || "Something went wrong starting your upload.");
+        setNeedsExtra(upData.code === "NEEDS_EXTRA_MATCH");
         return;
       }
 
@@ -244,9 +282,17 @@ export function UploadFlow({
               </div>
 
               {limitError && (
-                <div className="mt-4 p-3 rounded-xl text-sm" style={{ background: "rgba(245,158,11,0.1)", color: "#854F0B" }}>
-                  {limitError}{" "}
-                  <a href="/pricing" className="underline font-medium">See plans →</a>
+                <div className="mt-4 p-4 rounded-xl text-sm" style={{ background: "rgba(245,158,11,0.1)", color: "#854F0B" }}>
+                  <p>{limitError}</p>
+                  {needsExtra ? (
+                    <button onClick={buyExtraMatch} disabled={buyingExtra}
+                      className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full text-white disabled:opacity-60"
+                      style={{ background: "linear-gradient(135deg,#4F7DF3,#6E6BF5)" }}>
+                      {buyingExtra ? "Starting…" : "Buy 1 extra match — $7.50"}
+                    </button>
+                  ) : (
+                    <a href="/pricing" className="underline font-medium">See plans →</a>
+                  )}
                 </div>
               )}
 
@@ -269,12 +315,32 @@ export function UploadFlow({
                 <h1 className="text-xl font-semibold">Tap on yourself</h1>
               </div>
               <p className="text-sm text-brand-muted mb-4">
-                Tap your player in the first frame. We&apos;ll lock onto you and track you through the match.
+                First, pick the clearest frame — where everyone on court is visible. Then tap your player.
               </p>
+
+              {candidateFrames.length > 1 && (
+                <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
+                  {candidateFrames.map((f, i) => (
+                    <button key={i}
+                      onClick={() => { setFrameIndex(i); setTap(null); }}
+                      className="relative shrink-0 rounded-lg overflow-hidden border-2 transition-colors"
+                      style={{
+                        width: 96, aspectRatio: "16/9",
+                        borderColor: i === frameIndex ? "#4F7DF3" : "transparent",
+                      }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={f} alt={`Frame option ${i + 1}`} className="w-full h-full object-cover" />
+                      {i === frameIndex && (
+                        <span className="absolute inset-0" style={{ boxShadow: "inset 0 0 0 2px #4F7DF3" }} />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               <div
                 className="relative w-full rounded-2xl overflow-hidden border cursor-crosshair select-none"
-                style={{ aspectRatio: "16/9", borderColor: "#EEF0F5", background: firstFrame ? undefined : "#0B0D14" }}
+                style={{ aspectRatio: "16/9", borderColor: "#EEF0F5", background: candidateFrames.length ? undefined : "#0B0D14" }}
                 onClick={(e) => {
                   const rect = e.currentTarget.getBoundingClientRect();
                   const x = (e.clientX - rect.left) / rect.width;
@@ -282,9 +348,9 @@ export function UploadFlow({
                   setTap({ x, y });
                 }}
               >
-                {firstFrame ? (
+                {candidateFrames.length ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={firstFrame} alt="First frame" className="absolute inset-0 w-full h-full object-cover" />
+                  <img src={candidateFrames[frameIndex]} alt="Selected frame" className="absolute inset-0 w-full h-full object-cover" />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-white/60 text-sm">
                     Preview unavailable — tap anywhere to place your marker
@@ -321,9 +387,17 @@ export function UploadFlow({
 
         {/* STEP 4 — analysis */}
         {step === "analyze" && (
-          <motion.div key="analyze" initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            className="ambient-dark -mx-4 sm:-mx-6 -mt-20 sm:-mt-24 min-h-screen flex items-center justify-center px-6">
-            <div className="w-full max-w-md text-center">
+          <motion.div key="analyze" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
+            className="rounded-3xl overflow-hidden relative"
+            style={{
+              background:
+                "radial-gradient(600px 400px at 15% 0%, rgba(79,125,243,0.35), transparent 60%)," +
+                "radial-gradient(500px 380px at 100% 100%, rgba(139,92,246,0.30), transparent 55%)," +
+                "linear-gradient(180deg, #14161F 0%, #0E1018 100%)",
+              boxShadow: "0 24px 60px -20px rgba(20,22,32,0.35)",
+            }}>
+            <div className="w-full max-w-md mx-auto text-center px-6 py-16">
               <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 2.2, ease: "linear" }}
                 className="w-16 h-16 mx-auto mb-8 rounded-2xl flex items-center justify-center"
                 style={{ background: "linear-gradient(135deg,#4F7DF3,#8B5CF6)" }}>

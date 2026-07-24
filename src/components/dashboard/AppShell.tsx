@@ -5,7 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  LayoutGrid, Upload, User, Menu, X, ChevronLeft, LogOut, CreditCard,
+  LayoutGrid, Upload, User, Menu, X, ChevronLeft, LogOut, CreditCard, Crown,
 } from "lucide-react";
 import { BallIcon } from "@/components/BallIcon";
 
@@ -15,7 +15,7 @@ const nav = [
   { href: "/profile", label: "Profile & Settings", icon: User },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, showTeamNav = false }: { children: React.ReactNode; showTeamNav?: boolean }) {
   const pathname = usePathname();
   const router = useRouter();
   const [drawer, setDrawer] = useState(false);
@@ -36,6 +36,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </button>
         );
       })}
+      {showTeamNav && (
+        <button
+          onClick={() => { router.push("/team"); onNav?.(); }}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+          style={{
+            background: pathname.startsWith("/team")
+              ? "linear-gradient(135deg,#8B5CF614,#4F7DF314)"
+              : "linear-gradient(135deg,rgba(139,92,246,0.06),rgba(79,125,243,0.06))",
+            color: pathname.startsWith("/team") ? "#8B5CF6" : "#6D4CC7",
+          }}>
+          <Crown size={17} /> Team dashboard
+        </button>
+      )}
       <Link href="/pricing" onClick={onNav}
         className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-brand-muted">
         <CreditCard size={17} /> Upgrade

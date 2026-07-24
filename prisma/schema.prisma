@@ -31,6 +31,10 @@ model User {
   stripeSubscriptionId   String?  @unique
   planRenewsAt           DateTime?
 
+  // Pay-per-match: credits the user has purchased for analyses beyond
+  // their monthly included cap. Decremented when an over-cap analysis runs.
+  extraMatchCredits      Int      @default(0)
+
   athleteProfile AthleteProfile?
   matches        Match[]
   accounts       Account[]
@@ -53,6 +57,7 @@ enum Role {
 
 enum Plan {
   FREE
+  STARTER
   PRO
   TEAM
 }
@@ -78,12 +83,14 @@ model AthleteProfile {
 // Future: team accounts, coach dashboards, recruiter access all hang
 // off Organization.
 model Organization {
-  id        String  @id @default(cuid())
-  name      String
-  sport     String  @default("volleyball")
-  plan      Plan    @default(TEAM)
-  members   User[]
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  name       String
+  sport      String   @default("volleyball")
+  plan       Plan     @default(TEAM)
+  inviteCode String   @unique @default(cuid())
+  ownerId    String?
+  members    User[]
+  createdAt  DateTime @default(now())
 }
 
 // --- Matches & analysis ---------------------------------------------

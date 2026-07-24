@@ -1,25 +1,40 @@
 "use client";
 import Link from "next/link";
-import { Flame, Shield, Target, Zap, X as XIcon, Play } from "lucide-react";
+import { Flame, Shield, Target, Zap, X as XIcon, Play, Users } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
 import { Card, RatingRing, StatTile, SectionHeader } from "./ui";
+import { LockedFeature } from "./LockedFeature";
 
 type Match = { id: string; title: string; opponent: string | null; date: string; rating: number };
 
 export function DashboardClient({
-  userName, avgRating, season, progress, matches,
+  userName, avgRating, season, progress, matches, plan, features, usage,
 }: {
   userName: string;
   avgRating: number;
   season: { kills: number; blocks: number; digs: number; aces: number; errors: number; count: number };
   progress: { match: string; rating: number }[];
   matches: Match[];
+  plan?: string;
+  features?: { progressTracking: boolean; coachDashboard: boolean };
+  usage?: { includedAnalyses: number; remaining: number; extraCredits: number; isFounder: boolean } | null;
 }) {
+  const f = features || { progressTracking: true, coachDashboard: false };
+
   return (
     <div>
-      <SectionHeader title={`${userName.split(" ")[0]}'s season`} sub={`${season.count} matches analyzed`} />
+      <div className="flex items-center justify-between mb-5">
+        <SectionHeader title={`${userName.split(" ")[0]}'s season`} sub={`${season.count} matches analyzed`} />
+        {f.coachDashboard && (
+          <Link href="/team"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold px-3.5 py-2 rounded-full text-white shrink-0 -mt-5"
+            style={{ background: "linear-gradient(135deg,#8B5CF6,#4F7DF3)" }}>
+            <Users size={13} /> Team dashboard
+          </Link>
+        )}
+      </div>
 
       <div className="grid md:grid-cols-3 gap-4 mb-5">
         <Card className="flex items-center justify-center">
@@ -37,27 +52,47 @@ export function DashboardClient({
         </Card>
       </div>
 
-      {progress.length > 1 && (
-        <Card className="mb-5">
-          <h3 className="text-sm font-semibold mb-3">Rating progress</h3>
-          <div style={{ width: "100%", height: 240 }}>
-            <ResponsiveContainer>
-              <AreaChart data={progress}>
-                <defs>
-                  <linearGradient id="dashFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#4F7DF3" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#4F7DF3" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#EEF0F5" />
-                <XAxis dataKey="match" tick={{ fontSize: 12, fill: "#9AA2B1" }} />
-                <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: "#9AA2B1" }} />
-                <Tooltip />
-                <Area type="monotone" dataKey="rating" stroke="#4F7DF3" strokeWidth={2} fill="url(#dashFill)" />
-              </AreaChart>
-            </ResponsiveContainer>
+      {usage && !usage.isFounder && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 px-4 py-3 rounded-2xl border"
+          style={{ borderColor: "#EEF0F5", background: "rgba(79,125,243,0.04)" }}>
+          <div className="text-sm">
+            <span className="font-semibold" style={{ color: "#12141C" }}>
+              {usage.remaining} of {usage.includedAnalyses}
+            </span>
+            <span className="text-brand-muted"> analyses left this month</span>
+            {usage.extraCredits > 0 && (
+              <span className="text-brand-muted"> · {usage.extraCredits} extra credit{usage.extraCredits === 1 ? "" : "s"}</span>
+            )}
           </div>
-        </Card>
+          <Link href="/pricing" className="text-xs font-semibold text-brand">
+            {usage.remaining === 0 ? "Get more →" : "Upgrade →"}
+          </Link>
+        </div>
+      )}
+
+      {progress.length > 1 && (
+        <LockedFeature locked={!f.progressTracking} title="Season progress tracking">
+          <Card className="mb-5">
+            <h3 className="text-sm font-semibold mb-3">Rating progress</h3>
+            <div style={{ width: "100%", height: 240 }}>
+              <ResponsiveContainer>
+                <AreaChart data={progress}>
+                  <defs>
+                    <linearGradient id="dashFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#4F7DF3" stopOpacity={0.35} />
+                      <stop offset="100%" stopColor="#4F7DF3" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#EEF0F5" />
+                  <XAxis dataKey="match" tick={{ fontSize: 12, fill: "#9AA2B1" }} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 12, fill: "#9AA2B1" }} />
+                  <Tooltip />
+                  <Area type="monotone" dataKey="rating" stroke="#4F7DF3" strokeWidth={2} fill="url(#dashFill)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </Card>
+        </LockedFeature>
       )}
 
       <SectionHeader title="Your matches" />

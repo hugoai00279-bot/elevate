@@ -1,23 +1,20 @@
 // ====================================================================
 // PLAN GATING & UNIT ECONOMICS
 // --------------------------------------------------------------------
-// Single source of truth for what each plan can do AND for the cost
-// controls that keep every analysis profitable.
+// Two tiers for now: Free and Pro. (Team was removed until its real
+// coach-oversight feature set exists — an analysis "pool" can't be
+// priced profitably, so Team returns later as a tools/management plan.)
 //
 // KEY ECONOMIC RULE:
-//   Real video analysis (via the future CV backend) costs roughly
-//   $6 per full match. Therefore every plan includes a capped number
-//   of "full analyses" per month, and extra matches beyond the cap are
-//   sold as a pay-per-match add-on priced ABOVE cost. No "unlimited".
+//   Real video analysis (future CV backend) costs ~$6 per full match.
+//   Each plan includes a capped number of analyses; extras are sold at
+//   EXTRA_MATCH_PRICE (above cost). Free never triggers a paid analysis.
 //
-//   Free tier NEVER triggers a paid analysis call — it shows basic
-//   stats only, so non-paying users can never cost money.
-//
-// Founder override: add FOUNDER_EMAILS in Vercel env vars (comma
-// separated) to give specific accounts permanent Team-tier access.
+// Founder override: FOUNDER_EMAILS env var (comma separated) grants
+// permanent full access without Stripe.
 // ====================================================================
 
-export type PlanKey = "FREE" | "STARTER" | "PRO" | "TEAM";
+export type PlanKey = "FREE" | "PRO";
 
 // Price of one extra match beyond the monthly cap (USD).
 // Must stay above real cost (~$6) + Stripe fee to remain profitable.
@@ -33,9 +30,9 @@ export interface PlanFeatures {
   highlights: boolean;           // highlight reels
   progressTracking: boolean;     // season progress chart
   fullAnalysis: boolean;         // triggers real (costly) video AI; false = basic only
-  maxAthletes: number;           // team roster size (1 = solo)
-  coachDashboard: boolean;       // team/coach view
-  teamComparisons: boolean;      // team-wide comparison charts
+  maxAthletes: number;           // reserved for future Team plan
+  coachDashboard: boolean;       // reserved for future Team plan
+  teamComparisons: boolean;      // reserved for future Team plan
   prioritySupport: boolean;
 }
 
@@ -55,25 +52,10 @@ export const PLAN_FEATURES: Record<PlanKey, PlanFeatures> = {
     teamComparisons: false,
     prioritySupport: false,
   },
-  STARTER: {
-    label: "Starter",
-    monthlyPrice: 12.99,
-    includedAnalyses: 1,
-    allowsExtraMatches: true,
-    fullStats: true,
-    aiCoach: true,
-    highlights: true,
-    progressTracking: true,
-    fullAnalysis: true,
-    maxAthletes: 1,
-    coachDashboard: false,
-    teamComparisons: false,
-    prioritySupport: false,
-  },
   PRO: {
     label: "Pro",
-    monthlyPrice: 29.99,
-    includedAnalyses: 4,
+    monthlyPrice: 19.99,
+    includedAnalyses: 2, // 2 x ~$6 = ~$12 cost, leaves margin on $19.99
     allowsExtraMatches: true,
     fullStats: true,
     aiCoach: true,
@@ -83,21 +65,6 @@ export const PLAN_FEATURES: Record<PlanKey, PlanFeatures> = {
     maxAthletes: 1,
     coachDashboard: false,
     teamComparisons: false,
-    prioritySupport: false,
-  },
-  TEAM: {
-    label: "Team",
-    monthlyPrice: 59.99,
-    includedAnalyses: 10,
-    allowsExtraMatches: true,
-    fullStats: true,
-    aiCoach: true,
-    highlights: true,
-    progressTracking: true,
-    fullAnalysis: true,
-    maxAthletes: 15,
-    coachDashboard: true,
-    teamComparisons: true,
     prioritySupport: true,
   },
 };
@@ -114,9 +81,9 @@ function getFounderEmails(): string[] {
 }
 
 /**
- * Returns the plan that should actually govern this user's access.
- * Founder-listed emails always get TEAM (full access) plus effectively
- * unlimited analyses, regardless of stored plan or Stripe status.
+ * Returns the plan that governs this user's access. Founder-listed
+ * emails always get Pro with an effectively unlimited analysis cap.
+ * Any legacy "TEAM"/"STARTER" stored values fall back to Pro.
  */
 export function getEffectivePlan(user: { email: string; plan: string }): {
   plan: PlanKey;
@@ -125,15 +92,15 @@ export function getEffectivePlan(user: { email: string; plan: string }): {
 } {
   const founderEmails = getFounderEmails();
   if (user.email && founderEmails.includes(user.email.toLowerCase())) {
-    // Founders get Team features but with a very high analysis cap.
     return {
-      plan: "TEAM",
+      plan: "PRO",
       isFounderOverride: true,
-      features: { ...PLAN_FEATURES.TEAM, includedAnalyses: 100000 },
+      features: { ...PLAN_FEATURES.PRO, includedAnalyses: 100000 },
     };
   }
-  const key = (["FREE", "STARTER", "PRO", "TEAM"].includes(user.plan) ? user.plan : "FREE") as PlanKey;
-  return { plan: key, isFounderOverride: false, features: PLAN_FEATURES[key] };
+  // Free stays Free; everything else (Pro, and legacy Starter/Team) -> Pro.
+  const resolved: PlanKey = user.plan === "PRO" || user.plan === "STARTER" || user.plan === "TEAM" ? "PRO" : "FREE";
+  return { plan: resolved, isFounderOverride: false, features: PLAN_FEATURES[resolved] };
 }
 
 /** Human-readable label for a plan. */

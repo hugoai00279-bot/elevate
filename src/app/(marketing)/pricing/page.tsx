@@ -11,19 +11,9 @@ const plans = [
     cta: "Get started",
   },
   {
-    key: "STARTER", name: "Starter", price: 12.99,
-    features: ["1 full analysis / month", "Heat maps & shot charts", "AI coaching reports", "Highlight reels", "Extra matches $7.50 each"],
-    cta: "Choose Starter",
-  },
-  {
-    key: "PRO", name: "Pro", price: 29.99, highlight: true,
-    features: ["4 full analyses / month", "Everything in Starter", "Season progress tracking", "Priority processing", "Extra matches $7.50 each"],
+    key: "PRO", name: "Pro", price: 19.99, highlight: true,
+    features: ["2 full analyses / month", "Heat maps & shot charts", "AI coaching reports", "Highlight reels", "Season progress tracking", "Extra matches $7.50 each"],
     cta: "Upgrade to Pro",
-  },
-  {
-    key: "TEAM", name: "Team", price: 59.99,
-    features: ["10 shared analyses / month", "Up to 15 athletes", "Coach dashboard", "Team-wide comparisons", "Priority support"],
-    cta: "Upgrade to Team",
   },
 ];
 
@@ -63,7 +53,7 @@ export default function PricingPage() {
       <h1 className="text-4xl font-semibold tracking-tight text-center">Simple, honest pricing</h1>
       <p className="text-brand-muted text-center mt-4">Start free. Upgrade when you&apos;re ready.</p>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-14">
+      <div className="grid sm:grid-cols-2 gap-6 mt-14 max-w-2xl mx-auto">
         {plans.map((p) => (
           <div key={p.key}
             className="card p-7 flex flex-col"

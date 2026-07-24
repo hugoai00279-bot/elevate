@@ -1,12 +1,12 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Award, CreditCard } from "lucide-react";
+import { Award, CreditCard, Crown } from "lucide-react";
 import { RatingRing, Card, SectionHeader } from "./ui";
 
 const POSITIONS = ["Outside Hitter", "Opposite", "Setter", "Middle Blocker", "Libero"];
 
-export function ProfileClient({ name, email, plan, matchCount, profile }: any) {
+export function ProfileClient({ name, email, plan, isFounderOverride, matchCount, profile }: any) {
   const [position, setPosition] = useState(profile.position);
   const [jersey, setJersey] = useState(profile.defaultJersey);
   const [team, setTeam] = useState(profile.teamName);
@@ -86,15 +86,27 @@ export function ProfileClient({ name, email, plan, matchCount, profile }: any) {
         <div className="flex items-center gap-2 mb-3">
           <CreditCard size={16} className="text-brand" />
           <h3 className="text-sm font-semibold">Plan & billing</h3>
+          {isFounderOverride && (
+            <span className="ml-auto flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full"
+              style={{ background: "linear-gradient(135deg,#4F7DF31A,#8B5CF61A)", color: "#4F7DF3" }}>
+              <Crown size={12} /> Founder access
+            </span>
+          )}
         </div>
         <p className="text-sm text-brand-muted">
-          You&apos;re on the <strong className="text-brand-ink">{plan}</strong> plan.
+          {isFounderOverride ? (
+            <>You have permanent full access on the <strong className="text-brand-ink">{plan}</strong> plan as the founder — no billing required.</>
+          ) : (
+            <>You&apos;re on the <strong className="text-brand-ink">{plan}</strong> plan.</>
+          )}
         </p>
-        <Link href="/pricing"
-          className="inline-block mt-4 px-5 py-2.5 rounded-xl font-medium text-white text-sm"
-          style={{ background: "#12141C" }}>
-          {plan === "FREE" ? "Upgrade plan" : "Manage plan"}
-        </Link>
+        {!isFounderOverride && (
+          <Link href="/pricing"
+            className="inline-block mt-4 px-5 py-2.5 rounded-xl font-medium text-white text-sm"
+            style={{ background: "#12141C" }}>
+            {plan === "FREE" ? "Upgrade plan" : "Manage plan"}
+          </Link>
+        )}
       </Card>
     </div>
   );

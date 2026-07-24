@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
+import { getEffectivePlan, PLAN_LIMITS } from "@/lib/plan";
 
 // ====================================================================
 // UPLOAD ENDPOINT
@@ -10,11 +11,41 @@ import { prisma } from "@/lib/prisma";
 // long match videos with resumable chunked upload out of the box).
 // If MUX credentials are absent, we return a dev fallback so the flow
 // still works locally without a video host.
+//
+// Plan enforcement: Free-tier accounts are limited to a set number of
+// matches per calendar month (see src/lib/plan.ts). Founder-listed
+// emails and paid plans bypass this limit.
 // ====================================================================
 
 export async function POST(req: Request) {
   const userId = await getCurrentUserId();
   if (!userId) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+
+  const { plan: effectivePlan } = getEffectivePlan({ email: user.email, plan: user.plan as any });
+  const limit = PLAN_LIMITS[effectivePlan].matchesPerMonth;
+
+  if (limit !== null) {
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const matchesThisMonth = await prisma.match.count({
+      where: { userId, createdAt: { gte: startOfMonth } },
+    });
+
+    if (matchesThisMonth >= limit) {
+      return NextResponse.json(
+        {
+          error: `You've reached the Free plan's limit of ${limit} match${limit === 1 ? "" : "es"} this month. Upgrade to Pro for unlimited uploads.`,
+          code: "PLAN_LIMIT_REACHED",
+        },
+        { status: 403 }
+      );
+    }
+  }
 
   const { title, opponent } = await req.json().catch(() => ({}));
 

@@ -11,12 +11,12 @@ const plans = [
     cta: "Get started",
   },
   {
-    key: "PRO", name: "Pro", price: 12, highlight: true,
+    key: "PRO", name: "Pro", price: 7.99, highlight: true,
     features: ["Unlimited match analysis", "Full stats, heat maps & shot charts", "AI coaching reports", "Highlight reels", "Season progress tracking"],
     cta: "Upgrade to Pro",
   },
   {
-    key: "TEAM", name: "Team", price: 49,
+    key: "TEAM", name: "Team", price: 24.99,
     features: ["Everything in Pro", "Up to 15 athletes", "Coach dashboard", "Team-wide comparisons", "Priority support"],
     cta: "Upgrade to Team",
   },

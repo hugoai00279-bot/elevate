@@ -43,6 +43,7 @@ export function UploadFlow({
 
   const [stepIndex, setStepIndex] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [limitError, setLimitError] = useState<string | null>(null);
 
   // ---- Step 1: choose file & capture first frame -------------------
   async function onFile(f: File) {
@@ -75,6 +76,7 @@ export function UploadFlow({
   // ---- Step 2 -> 3: create match, save identification ---------------
   async function confirmIdentity() {
     setBusy(true);
+    setLimitError(null);
     try {
       // Create the match + get upload target.
       const up = await fetch("/api/upload", {
@@ -83,6 +85,12 @@ export function UploadFlow({
         body: JSON.stringify({ title, opponent }),
       });
       const upData = await up.json();
+
+      if (!up.ok) {
+        setLimitError(upData.error || "Something went wrong starting your upload.");
+        return;
+      }
+
       setMatchId(upData.matchId);
 
       // If a real upload URL exists (Mux), push the bytes.
@@ -234,6 +242,13 @@ export function UploadFlow({
                   </div>
                 </div>
               </div>
+
+              {limitError && (
+                <div className="mt-4 p-3 rounded-xl text-sm" style={{ background: "rgba(245,158,11,0.1)", color: "#854F0B" }}>
+                  {limitError}{" "}
+                  <a href="/pricing" className="underline font-medium">See plans →</a>
+                </div>
+              )}
 
               <button onClick={confirmIdentity} disabled={busy || !position}
                 className="mt-7 w-full py-3 rounded-xl text-white font-medium disabled:opacity-50"

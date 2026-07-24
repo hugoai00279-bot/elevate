@@ -14,7 +14,7 @@ export const PLANS = {
   },
   PRO: {
     name: "Pro",
-    price: 12,
+    price: 7.99,
     priceId: process.env.STRIPE_PRICE_PRO ?? null,
     features: [
       "Unlimited match analysis",
@@ -26,7 +26,7 @@ export const PLANS = {
   },
   TEAM: {
     name: "Team",
-    price: 49,
+    price: 24.99,
     priceId: process.env.STRIPE_PRICE_TEAM ?? null,
     features: [
       "Everything in Pro",

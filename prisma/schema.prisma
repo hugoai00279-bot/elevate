@@ -37,6 +37,7 @@ model User {
 
   athleteProfile AthleteProfile?
   matches        Match[]
+  goals          Goal[]
   accounts       Account[]
   sessions       Session[]
 
@@ -219,4 +220,16 @@ model VerificationToken {
   token      String   @unique
   expires    DateTime
   @@unique([identifier, token])
+}
+
+// Interactive per-athlete goals (no AI needed). e.g. "20 kills per match".
+model Goal {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  metric     String   // kills, blocks, digs, aces, rating, attackPct
+  target     Float
+  timeframe  String   @default("per_match") // per_match | season
+  createdAt  DateTime @default(now())
+  @@index([userId])
 }

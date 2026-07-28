@@ -6,11 +6,17 @@ import { signOut } from "next-auth/react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   LayoutGrid, Upload, User, Menu, X, ChevronLeft, LogOut, CreditCard, Crown,
+  BarChart3, Film, TrendingUp, Target, ListVideo,
 } from "lucide-react";
 import { BallIcon } from "@/components/BallIcon";
 
 const nav = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutGrid },
+  { href: "/dashboard", label: "Overview", icon: LayoutGrid },
+  { href: "/matches", label: "My Matches", icon: ListVideo },
+  { href: "/statistics", label: "Statistics", icon: BarChart3 },
+  { href: "/highlights", label: "Highlights", icon: Film },
+  { href: "/progress", label: "Progress", icon: TrendingUp },
+  { href: "/goals", label: "Goals", icon: Target },
   { href: "/upload", label: "Upload Match", icon: Upload },
   { href: "/profile", label: "Profile & Settings", icon: User },
 ];

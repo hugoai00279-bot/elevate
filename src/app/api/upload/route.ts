@@ -26,6 +26,21 @@ export async function POST(req: Request) {
   const usage = await getUsageStatus(userId);
   if (!usage) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
+  // The Free tier is a demo: it can explore /matches/sample but never
+  // analyze its own video. Blocked here before any Match row is created.
+  if (usage.isDemo) {
+    return NextResponse.json(
+      {
+        error:
+          "The Free plan is a demo — you can explore the sample match, but analyzing " +
+          "your own video requires a paid plan. Upgrade to Starter ($9.99/mo, 1 match) " +
+          "or Pro ($19.99/mo, 3 matches) to analyze your match.",
+        code: "DEMO_PLAN",
+      },
+      { status: 403 }
+    );
+  }
+
   if (!usage.canAnalyze) {
     if (usage.needsExtraMatch) {
       return NextResponse.json(

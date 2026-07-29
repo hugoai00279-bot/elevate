@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Upload, TrendingUp } from "lucide-react";
+import { Upload, TrendingUp, Eye, Sparkles } from "lucide-react";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { getEffectivePlan } from "@/lib/plan";
@@ -44,12 +44,21 @@ export default async function DashboardPage() {
     (m: MatchWithStats, i: number) => ({ match: `M${i + 1}`, rating: m.stats?.rating ?? 0 })
   );
 
+  const { plan, features } = getEffectivePlan({ email: user.email, plan: user.plan as any });
+  const usage = await getUsageStatus(user.id);
+
   // New user with no matches yet -> friendly empty state (no demo data).
+  // On the Free/demo plan the primary action is the sample match, since
+  // uploading their own video isn't available to them.
   if (matches.length === 0) {
     return (
       <div>
         <h1 className="text-2xl font-semibold">Welcome, {user.name?.split(" ")[0] || "athlete"}.</h1>
-        <p className="text-brand-muted mt-1">Upload your first match to see your personalized analysis.</p>
+        <p className="text-brand-muted mt-1">
+          {features.isDemo
+            ? "Explore the sample match to see what Elevate produces."
+            : "Upload your first match to see your personalized analysis."}
+        </p>
         <div className="card p-10 mt-8 text-center flex flex-col items-center">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-white mb-4"
             style={{ background: "linear-gradient(135deg,#4F7DF3,#8B5CF6)" }}>
@@ -57,20 +66,34 @@ export default async function DashboardPage() {
           </div>
           <h2 className="text-lg font-semibold">No matches yet</h2>
           <p className="text-sm text-brand-muted mt-1 max-w-sm">
-            Your stats, highlights and coaching reports will appear here once you analyze a match.
+            {features.isDemo
+              ? "You're on the Free demo plan. Take a look at the full sample match, then upgrade to Starter or Pro to analyze your own video."
+              : "Your stats, highlights and coaching reports will appear here once you analyze a match."}
           </p>
-          <Link href="/upload"
-            className="mt-6 px-6 py-3 rounded-2xl text-white font-medium flex items-center gap-2"
-            style={{ background: "linear-gradient(135deg,#4F7DF3,#6E6BF5)" }}>
-            <Upload size={18} /> Upload your first match
-          </Link>
+          {features.isDemo ? (
+            <div className="mt-6 flex flex-col sm:flex-row gap-3">
+              <Link href="/matches/sample"
+                className="px-6 py-3 rounded-2xl text-white font-medium flex items-center justify-center gap-2"
+                style={{ background: "linear-gradient(135deg,#4F7DF3,#6E6BF5)" }}>
+                <Eye size={18} /> View sample match
+              </Link>
+              <Link href="/pricing"
+                className="px-6 py-3 rounded-2xl font-medium flex items-center justify-center gap-2 border"
+                style={{ borderColor: "#E4E7EF", color: "#12141C" }}>
+                <Sparkles size={16} /> Upgrade to analyze your own
+              </Link>
+            </div>
+          ) : (
+            <Link href="/upload"
+              className="mt-6 px-6 py-3 rounded-2xl text-white font-medium flex items-center gap-2"
+              style={{ background: "linear-gradient(135deg,#4F7DF3,#6E6BF5)" }}>
+              <Upload size={18} /> Upload your first match
+            </Link>
+          )}
         </div>
       </div>
     );
   }
-
-  const { plan, features } = getEffectivePlan({ email: user.email, plan: user.plan as any });
-  const usage = await getUsageStatus(user.id);
 
   return (
     <DashboardClient
@@ -80,6 +103,7 @@ export default async function DashboardPage() {
       progress={progress}
       plan={plan}
       features={features}
+      isDemo={features.isDemo}
       usage={usage ? {
         includedAnalyses: usage.includedAnalyses,
         remaining: usage.remaining,

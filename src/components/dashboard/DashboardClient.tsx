@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Flame, Shield, Target, Zap, X as XIcon, Play, Users } from "lucide-react";
+import { Flame, Shield, Target, Zap, X as XIcon, Play, Users, Eye } from "lucide-react";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -10,7 +10,7 @@ import { LockedFeature } from "./LockedFeature";
 type Match = { id: string; title: string; opponent: string | null; date: string; rating: number };
 
 export function DashboardClient({
-  userName, avgRating, season, progress, matches, plan, features, usage,
+  userName, avgRating, season, progress, matches, plan, features, usage, isDemo,
 }: {
   userName: string;
   avgRating: number;
@@ -20,6 +20,7 @@ export function DashboardClient({
   plan?: string;
   features?: { progressTracking: boolean; coachDashboard: boolean };
   usage?: { includedAnalyses: number; remaining: number; extraCredits: number; isFounder: boolean } | null;
+  isDemo?: boolean;
 }) {
   const f = features || { progressTracking: true, coachDashboard: false };
 
@@ -52,7 +53,26 @@ export function DashboardClient({
         </Card>
       </div>
 
-      {usage && !usage.isFounder && (
+      {/* Demo (Free) plan: the sample match is the thing to do here. */}
+      {isDemo && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 px-4 py-3.5 rounded-2xl border"
+          style={{ borderColor: "#D9E1FB", background: "rgba(79,125,243,0.06)" }}>
+          <div className="text-sm">
+            <span className="font-semibold" style={{ color: "#12141C" }}>You&apos;re on the Free demo plan.</span>
+            <span className="text-brand-muted"> Explore a full example match, then upgrade to analyze your own.</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <Link href="/matches/sample"
+              className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-full text-white"
+              style={{ background: "linear-gradient(135deg,#4F7DF3,#6E6BF5)" }}>
+              <Eye size={13} /> View sample match
+            </Link>
+            <Link href="/pricing" className="text-xs font-semibold text-brand">Upgrade →</Link>
+          </div>
+        </div>
+      )}
+
+      {usage && !usage.isFounder && !isDemo && (
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5 px-4 py-3 rounded-2xl border"
           style={{ borderColor: "#EEF0F5", background: "rgba(79,125,243,0.04)" }}>
           <div className="text-sm">

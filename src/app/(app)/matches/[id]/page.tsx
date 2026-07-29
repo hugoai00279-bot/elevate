@@ -1,11 +1,38 @@
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
-import { getEffectivePlan } from "@/lib/plan";
+import { getEffectivePlan, PLAN_FEATURES } from "@/lib/plan";
+import { SAMPLE_MATCH_ID, getSampleMatch } from "@/lib/sampleMatch";
 import { MatchResults } from "@/components/dashboard/MatchResults";
 
 export default async function MatchPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+
+  // --- Built-in sample match ----------------------------------------
+  // Open to everyone, including the Free/demo tier: it's the whole point
+  // of that tier. No ownership check and no feature gating — the sample
+  // is meant to show the complete product, clearly labelled as a sample.
+  if (id === SAMPLE_MATCH_ID) {
+    const sample = getSampleMatch();
+    const viewer = await getCurrentUser();
+    const viewerIsDemo = viewer
+      ? getEffectivePlan({ email: viewer.email, plan: viewer.plan as any }).features.isDemo
+      : true;
+
+    return (
+      <MatchResults
+        match={sample.match}
+        stats={sample.stats}
+        highlights={sample.highlights}
+        report={sample.report}
+        features={PLAN_FEATURES.PRO}
+        isSample
+        // Only nudge people who can't yet analyze their own video.
+        showUpgradePrompt={viewerIsDemo}
+      />
+    );
+  }
+
   const user = await getCurrentUser();
   if (!user) return null;
 

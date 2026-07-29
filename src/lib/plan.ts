@@ -1,28 +1,33 @@
 // ====================================================================
 // PLAN GATING & UNIT ECONOMICS
 // --------------------------------------------------------------------
-// Two tiers for now: Free and Pro. (Team was removed until its real
-// coach-oversight feature set exists — an analysis "pool" can't be
-// priced profitably, so Team returns later as a tools/management plan.)
+// Three tiers: Free (demo), Starter, Pro.
+//
+// FREE is a DEMO tier, not a usage tier. It includes ZERO analyses —
+// free users can explore a built-in sample match (src/lib/sampleMatch.ts)
+// with every feature visible, but cannot analyze their own video. That
+// keeps acquisition cost at zero while still showing the full product.
 //
 // KEY ECONOMIC RULE:
 //   Real video analysis (future CV backend) costs ~$6 per full match.
-//   Each plan includes a capped number of analyses; extras are sold at
-//   EXTRA_MATCH_PRICE (above cost). Free never triggers a paid analysis.
+//   Each paid plan includes a capped number of analyses; extras are sold
+//   at EXTRA_MATCH_PRICE (above cost). Free never triggers a paid analysis.
 //
 // Founder override: FOUNDER_EMAILS env var (comma separated) grants
 // permanent full access without Stripe.
 // ====================================================================
 
-export type PlanKey = "FREE" | "PRO";
+export type PlanKey = "FREE" | "STARTER" | "PRO";
 
 // Price of one extra match beyond the monthly cap (USD).
 // Must stay above real cost (~$6) + Stripe fee to remain profitable.
+// Only Starter and Pro may buy these (see allowsExtraMatches).
 export const EXTRA_MATCH_PRICE = 7.5;
 
 export interface PlanFeatures {
   label: string;
   monthlyPrice: number;          // USD/month
+  isDemo: boolean;               // demo-only tier: sample match, no own uploads
   includedAnalyses: number;      // full AI analyses included per month
   allowsExtraMatches: boolean;   // can buy more at EXTRA_MATCH_PRICE
   fullStats: boolean;            // heat map + shot chart
@@ -40,13 +45,35 @@ export const PLAN_FEATURES: Record<PlanKey, PlanFeatures> = {
   FREE: {
     label: "Free",
     monthlyPrice: 0,
-    includedAnalyses: 1,
+    isDemo: true,
+    // Zero included analyses: the free tier is a guided demo of the
+    // sample match, never a path to a real (costly) analysis.
+    includedAnalyses: 0,
     allowsExtraMatches: false,
-    fullStats: false,
-    aiCoach: false,
-    highlights: false,
-    progressTracking: false,
-    fullAnalysis: false, // basic stats only — never calls the paid AI
+    // Feature flags stay ON so the sample match renders complete — every
+    // panel visible, nothing blurred. The gate that matters for cost is
+    // includedAnalyses: 0, enforced on upload/analyze.
+    fullStats: true,
+    aiCoach: true,
+    highlights: true,
+    progressTracking: true,
+    fullAnalysis: false, // never calls the paid AI backend
+    maxAthletes: 1,
+    coachDashboard: false,
+    teamComparisons: false,
+    prioritySupport: false,
+  },
+  STARTER: {
+    label: "Starter",
+    monthlyPrice: 9.99,
+    isDemo: false,
+    includedAnalyses: 1, // ~$6 cost, leaves margin on $9.99
+    allowsExtraMatches: true,
+    fullStats: true,
+    aiCoach: true,
+    highlights: true,
+    progressTracking: true,
+    fullAnalysis: true,
     maxAthletes: 1,
     coachDashboard: false,
     teamComparisons: false,
@@ -55,7 +82,8 @@ export const PLAN_FEATURES: Record<PlanKey, PlanFeatures> = {
   PRO: {
     label: "Pro",
     monthlyPrice: 19.99,
-    includedAnalyses: 2, // 2 x ~$6 = ~$12 cost, leaves margin on $19.99
+    isDemo: false,
+    includedAnalyses: 3, // 3 x ~$6 = ~$18 cost at full use on $19.99
     allowsExtraMatches: true,
     fullStats: true,
     aiCoach: true,
@@ -83,7 +111,7 @@ function getFounderEmails(): string[] {
 /**
  * Returns the plan that governs this user's access. Founder-listed
  * emails always get Pro with an effectively unlimited analysis cap.
- * Any legacy "TEAM"/"STARTER" stored values fall back to Pro.
+ * Legacy "TEAM" stored values fall back to Pro.
  */
 export function getEffectivePlan(user: { email: string; plan: string }): {
   plan: PlanKey;
@@ -98,8 +126,10 @@ export function getEffectivePlan(user: { email: string; plan: string }): {
       features: { ...PLAN_FEATURES.PRO, includedAnalyses: 100000 },
     };
   }
-  // Free stays Free; everything else (Pro, and legacy Starter/Team) -> Pro.
-  const resolved: PlanKey = user.plan === "PRO" || user.plan === "STARTER" || user.plan === "TEAM" ? "PRO" : "FREE";
+  const resolved: PlanKey =
+    user.plan === "PRO" || user.plan === "TEAM" ? "PRO"
+    : user.plan === "STARTER" ? "STARTER"
+    : "FREE";
   return { plan: resolved, isFounderOverride: false, features: PLAN_FEATURES[resolved] };
 }
 

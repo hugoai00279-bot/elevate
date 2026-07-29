@@ -8,6 +8,12 @@ export async function POST(req: Request) {
   if (!user) return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
 
   const { plan } = (await req.json()) as { plan: PlanKey };
+  if (plan === "FREE") {
+    return NextResponse.json(
+      { error: "The Free plan is the default — there's nothing to check out." },
+      { status: 400 }
+    );
+  }
   const planConfig = PLANS[plan];
   if (!planConfig || !planConfig.priceId) {
     return NextResponse.json(

@@ -1,5 +1,6 @@
 "use client";
-import { Flame, Shield, Target, Zap, X as XIcon, TrendingUp, Sparkles, Play, Info } from "lucide-react";
+import Link from "next/link";
+import { Flame, Shield, Target, Zap, X as XIcon, TrendingUp, Sparkles, Play, Info, Eye } from "lucide-react";
 import {
   RadarChart, PolarGrid, PolarAngleAxis, Radar, ResponsiveContainer,
 } from "recharts";
@@ -10,7 +11,9 @@ const CAT_COLOR: Record<string, string> = {
   Kills: "#4F7DF3", Aces: "#F59E0B", Blocks: "#14B8A6", Rallies: "#8B5CF6",
 };
 
-export function MatchResults({ match, stats, highlights, report, features, simulated }: any) {
+export function MatchResults({
+  match, stats, highlights, report, features, simulated, isSample, showUpgradePrompt,
+}: any) {
   const f = features || { fullStats: true, aiCoach: true, highlights: true };
   if (!stats) {
     return (
@@ -39,11 +42,41 @@ export function MatchResults({ match, stats, highlights, report, features, simul
         sub={`${match.opponent ? "vs " + match.opponent + " · " : ""}${new Date(match.date).toLocaleDateString()}${match.jersey ? " · #" + match.jersey : ""}${match.position ? " · " + match.position : ""}`}
       />
 
-      {simulated && (
+      {isSample && (
+        <div className="flex items-start gap-2 text-xs mb-5 px-3 py-2.5 rounded-xl"
+          style={{ background: "rgba(79,125,243,0.08)", color: "#2C4FA8" }}>
+          <Eye size={14} className="mt-0.5 shrink-0" />
+          <span>
+            <strong>This is a sample match.</strong> It&apos;s example data for a fictional
+            game, included so you can see exactly what Elevate produces — it is not an
+            analysis of your video.
+          </span>
+        </div>
+      )}
+
+      {simulated && !isSample && (
         <div className="flex items-center gap-2 text-xs mb-5 px-3 py-2 rounded-xl"
           style={{ background: "rgba(245,158,11,0.1)", color: "#B45309" }}>
           <Info size={14} />
           Demo analysis — these results are simulated. Connect a computer-vision backend to get real match analysis.
+        </div>
+      )}
+
+      {showUpgradePrompt && (
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 px-5 py-4 rounded-2xl"
+          style={{ background: "linear-gradient(135deg,#4F7DF3,#8B5CF6)" }}>
+          <div className="text-white">
+            <p className="text-sm font-semibold">Want this for your own match?</p>
+            <p className="text-xs mt-0.5" style={{ color: "rgba(255,255,255,0.85)" }}>
+              Upgrade to Starter or Pro to upload your video and get your own stats,
+              highlights and coaching report.
+            </p>
+          </div>
+          <Link href="/pricing"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-full shrink-0"
+            style={{ background: "white", color: "#3B5FD0" }}>
+            <Sparkles size={13} /> Upgrade to analyze your own
+          </Link>
         </div>
       )}
 

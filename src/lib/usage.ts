@@ -3,6 +3,7 @@ import { getEffectivePlan } from "@/lib/plan";
 
 export interface UsageStatus {
   plan: string;
+  isDemo: boolean;            // demo (Free) tier: sample match only, no own uploads
   includedAnalyses: number;
   usedThisMonth: number;
   extraCredits: number;
@@ -36,11 +37,15 @@ export async function getUsageStatus(userId: string): Promise<UsageStatus | null
 
   const withinIncluded = remaining > 0;
   const canUseCredit = extraCredits > 0;
-  const canAnalyze = withinIncluded || canUseCredit;
-  const needsExtraMatch = !withinIncluded && !canUseCredit && features.allowsExtraMatches;
+  // The demo tier can never analyze its own video — not even with leftover
+  // extra-match credits from a previous paid subscription.
+  const canAnalyze = !features.isDemo && (withinIncluded || canUseCredit);
+  const needsExtraMatch =
+    !features.isDemo && !withinIncluded && !canUseCredit && features.allowsExtraMatches;
 
   return {
     plan,
+    isDemo: features.isDemo,
     includedAnalyses: features.includedAnalyses,
     usedThisMonth,
     extraCredits,

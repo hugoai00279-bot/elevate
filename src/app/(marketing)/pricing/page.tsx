@@ -2,17 +2,47 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Check } from "lucide-react";
+import { Check, X } from "lucide-react";
 
+// Keep in sync with PLAN_FEATURES (src/lib/plan.ts) and PLANS (src/lib/stripe.ts).
 const plans = [
   {
     key: "FREE", name: "Free", price: 0,
-    features: ["1 match / month", "Basic stats & AI rating", "Community support"],
-    cta: "Get started",
+    tagline: "A full demo — no card needed",
+    features: [
+      "Explore a full sample match",
+      "See every stat, highlight & AI report",
+      "Community support",
+    ],
+    // Stated plainly so the demo limit is never a surprise after signup.
+    excluded: ["Analysis of your own video"],
+    cta: "Start with the demo",
+  },
+  {
+    key: "STARTER", name: "Starter", price: 9.99,
+    tagline: "For one match a month",
+    features: [
+      "1 full analysis / month",
+      "Heat maps & shot charts",
+      "AI coaching reports",
+      "Highlight reels",
+      "Season progress tracking",
+      "Extra matches $7.50 each",
+    ],
+    cta: "Choose Starter",
   },
   {
     key: "PRO", name: "Pro", price: 19.99, highlight: true,
-    features: ["2 full analyses / month", "Heat maps & shot charts", "AI coaching reports", "Highlight reels", "Season progress tracking", "Extra matches $7.50 each"],
+    tagline: "For athletes in season",
+    features: [
+      "3 full analyses / month",
+      "Heat maps & shot charts",
+      "AI coaching reports",
+      "Highlight reels",
+      "Season progress tracking",
+      "Extra matches $7.50 each",
+      "Priority support",
+    ],
     cta: "Upgrade to Pro",
   },
 ];
@@ -51,9 +81,11 @@ export default function PricingPage() {
   return (
     <div className="max-w-6xl mx-auto px-6 py-20">
       <h1 className="text-4xl font-semibold tracking-tight text-center">Simple, honest pricing</h1>
-      <p className="text-brand-muted text-center mt-4">Start free. Upgrade when you&apos;re ready.</p>
+      <p className="text-brand-muted text-center mt-4">
+        Try the demo free. Upgrade when you&apos;re ready to analyze your own match.
+      </p>
 
-      <div className="grid sm:grid-cols-2 gap-6 mt-14 max-w-2xl mx-auto">
+      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-14">
         {plans.map((p) => (
           <div key={p.key}
             className="card p-7 flex flex-col"
@@ -65,6 +97,7 @@ export default function PricingPage() {
               </span>
             )}
             <h3 className="text-lg font-semibold">{p.name}</h3>
+            <p className="text-xs text-brand-faint mt-1">{p.tagline}</p>
             <div className="mt-2 mb-5">
               <span className="text-4xl font-semibold">${p.price % 1 === 0 ? p.price : p.price.toFixed(2)}</span>
               <span className="text-brand-muted text-sm">/month</span>
@@ -73,6 +106,11 @@ export default function PricingPage() {
               {p.features.map((f) => (
                 <li key={f} className="flex items-start gap-2 text-sm text-brand-muted">
                   <Check size={16} className="text-brand mt-0.5 shrink-0" /> {f}
+                </li>
+              ))}
+              {p.excluded?.map((f) => (
+                <li key={f} className="flex items-start gap-2 text-sm text-brand-faint">
+                  <X size={16} className="mt-0.5 shrink-0" style={{ color: "#C3C9D6" }} /> {f}
                 </li>
               ))}
             </ul>
@@ -86,12 +124,14 @@ export default function PricingPage() {
           </div>
         ))}
       </div>
-      <p className="text-center text-sm text-brand-muted mt-8 max-w-lg mx-auto">
-        Need more than your plan includes? Analyze extra matches anytime for
-        <strong className="text-brand-ink"> $7.50 each</strong> — no need to upgrade.
+
+      <p className="text-center text-sm text-brand-muted mt-10 max-w-xl mx-auto">
+        Need more than your plan includes? On Starter and Pro you can analyze extra matches
+        anytime for <strong className="text-brand-ink">$7.50 each</strong> — no need to upgrade.
       </p>
       <p className="text-center text-xs text-brand-faint mt-3">
-        Payments are processed securely by Stripe. Cancel anytime.
+        The Free plan is a demo: it includes the built-in sample match, not analysis of your
+        own video. Payments are processed securely by Stripe. Cancel anytime.
       </p>
     </div>
   );

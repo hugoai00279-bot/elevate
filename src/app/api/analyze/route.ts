@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getCurrentUserId } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
 import { runAnalysis } from "@/lib/analysis/provider";
+import { getUsageStatus } from "@/lib/usage";
 
 // POST /api/analyze { matchId }
 // Runs analysis for a match the user owns, then saves stats, highlights
@@ -14,6 +15,21 @@ export async function POST(req: Request) {
   const { matchId } = await req.json();
   const match = await prisma.match.findFirst({ where: { id: matchId, userId } });
   if (!match) return NextResponse.json({ error: "Match not found" }, { status: 404 });
+
+  // Second gate (the first is in /api/upload): the demo tier must never
+  // reach the analysis backend, even with a match id in hand.
+  const usage = await getUsageStatus(userId);
+  if (usage?.isDemo) {
+    return NextResponse.json(
+      {
+        error:
+          "The Free plan is a demo — analyzing your own video requires Starter or Pro. " +
+          "You can explore the sample match at /matches/sample.",
+        code: "DEMO_PLAN",
+      },
+      { status: 403 }
+    );
+  }
 
   await prisma.match.update({ where: { id: matchId }, data: { status: "ANALYZING" } });
 

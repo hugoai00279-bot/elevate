@@ -5,6 +5,7 @@ import {
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { Card, SectionHeader } from "./ui";
 import { LockedFeature } from "./LockedFeature";
+import { Reveal, RevealGroup, RevealItem } from "./motion";
 
 function trend(series: any[], key: string) {
   if (series.length < 2) return { dir: "flat", delta: 0 };
@@ -39,30 +40,37 @@ export function ProgressClient({ series, enabled }: { series: any[]; enabled: bo
 
   const content = (
     <>
-      <div className="grid sm:grid-cols-3 gap-4 mb-5">
-        <Card>
-          <div className="text-xs text-brand-faint mb-1">AI Rating trend</div>
-          <div className="flex items-center justify-between">
-            <span className="text-2xl font-semibold">{series[series.length - 1].rating}</span>
-            <TrendBadge t={ratingTrend} />
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs text-brand-faint mb-1">Kills trend</div>
-          <div className="flex items-center justify-between">
-            <span className="text-2xl font-semibold">{series[series.length - 1].kills}</span>
-            <TrendBadge t={killsTrend} />
-          </div>
-        </Card>
-        <Card>
-          <div className="text-xs text-brand-faint mb-1">Attack % trend</div>
-          <div className="flex items-center justify-between">
-            <span className="text-2xl font-semibold">{series[series.length - 1].attackPct}%</span>
-            <TrendBadge t={attackTrend} suffix="%" />
-          </div>
-        </Card>
-      </div>
+      <RevealGroup className="grid sm:grid-cols-3 gap-4 mb-5">
+        <RevealItem>
+          <Card className="h-full">
+            <div className="text-xs text-brand-faint mb-1">AI Rating trend</div>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-semibold">{series[series.length - 1].rating}</span>
+              <TrendBadge t={ratingTrend} />
+            </div>
+          </Card>
+        </RevealItem>
+        <RevealItem>
+          <Card className="h-full">
+            <div className="text-xs text-brand-faint mb-1">Kills trend</div>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-semibold">{series[series.length - 1].kills}</span>
+              <TrendBadge t={killsTrend} />
+            </div>
+          </Card>
+        </RevealItem>
+        <RevealItem>
+          <Card className="h-full">
+            <div className="text-xs text-brand-faint mb-1">Attack % trend</div>
+            <div className="flex items-center justify-between">
+              <span className="text-2xl font-semibold">{series[series.length - 1].attackPct}%</span>
+              <TrendBadge t={attackTrend} suffix="%" />
+            </div>
+          </Card>
+        </RevealItem>
+      </RevealGroup>
 
+      <Reveal delay={0.14}>
       <Card className="mb-5">
         <h3 className="text-sm font-semibold mb-3">AI rating over time</h3>
         <div style={{ width: "100%", height: 240 }}>
@@ -83,7 +91,9 @@ export function ProgressClient({ series, enabled }: { series: any[]; enabled: bo
           </ResponsiveContainer>
         </div>
       </Card>
+      </Reveal>
 
+      <Reveal delay={0.2}>
       <Card>
         <h3 className="text-sm font-semibold mb-3">Kills & attack % by match</h3>
         <div style={{ width: "100%", height: 240 }}>
@@ -99,6 +109,7 @@ export function ProgressClient({ series, enabled }: { series: any[]; enabled: bo
           </ResponsiveContainer>
         </div>
       </Card>
+      </Reveal>
     </>
   );
 

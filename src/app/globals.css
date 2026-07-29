@@ -38,6 +38,45 @@ body {
   backdrop-filter: blur(8px);
 }
 
+/* ------------------------------------------------------------------
+   Interaction polish
+   Kept in CSS rather than JS: these are per-pointer responses, so they
+   need to be instant and never wait on React to re-render.
+   ------------------------------------------------------------------ */
+
+/* Hover lift for clickable cards (match cards, highlight clips).
+   2px is deliberately small — enough to read as "this is clickable"
+   without the grid feeling like it's shifting around under the cursor. */
+.card-lift {
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+              box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+.card-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 28px -14px rgba(20, 22, 32, 0.22);
+}
+.card-lift:active {
+  transform: translateY(-1px) scale(0.995);
+}
+
+/* Tactile press on every button and .press-styled link. Applied globally
+   so feedback is consistent app-wide instead of per-component. Disabled
+   buttons are excluded — they shouldn't feel pressable. */
+button,
+.press {
+  transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1);
+}
+button:not(:disabled):active,
+.press:active {
+  transform: scale(0.975);
+}
+
+/* Respect the OS setting. This covers CSS transitions/animations;
+   framer-motion is handled by <MotionConfig reducedMotion="user">. */
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+  .card-lift:hover { transform: none; }
+  button:not(:disabled):active,
+  .press:active { transform: none; }
 }

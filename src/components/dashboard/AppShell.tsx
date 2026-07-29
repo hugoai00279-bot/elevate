@@ -3,7 +3,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, MotionConfig } from "framer-motion";
+import { EASE, DUR } from "./motion";
 import {
   LayoutGrid, Upload, User, Menu, X, ChevronLeft, LogOut, CreditCard, Crown,
   BarChart3, Film, TrendingUp, Target, ListVideo,
@@ -67,6 +68,7 @@ export function AppShell({ children, showTeamNav = false }: { children: React.Re
   );
 
   return (
+    <MotionConfig reducedMotion="user">
     <div className="ambient-light min-h-screen relative">
       {/* Persistent top-left Elevate button — always returns to landing */}
       <div className="fixed top-0 left-0 z-30 p-4 sm:p-5">
@@ -119,8 +121,28 @@ export function AppShell({ children, showTeamNav = false }: { children: React.Re
           )}
         </AnimatePresence>
 
-        <main className="flex-1 min-w-0">{children}</main>
+        {/*
+          Page transition. Keyed on pathname so each dashboard section
+          fades and rises in as it mounts.
+
+          Deliberately entrance-only: with the App Router the outgoing
+          tree unmounts the moment the new route commits, so an exit
+          animation would mean holding stale content on screen and would
+          read as lag on every click. Fading the incoming page keeps
+          navigation feeling instant but not abrupt.
+        */}
+        <main className="flex-1 min-w-0">
+          <motion.div
+            key={pathname}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: DUR.base, ease: EASE }}
+          >
+            {children}
+          </motion.div>
+        </main>
       </div>
     </div>
+    </MotionConfig>
   );
 }

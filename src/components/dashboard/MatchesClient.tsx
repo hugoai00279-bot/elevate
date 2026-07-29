@@ -3,6 +3,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Search, Play, ArrowUpDown, Upload } from "lucide-react";
 import { SectionHeader } from "./ui";
+import { RevealGroup, RevealItem } from "./motion";
 import type { LoadedMatch } from "@/lib/matchData";
 
 type SortKey = "date" | "rating" | "kills";
@@ -63,25 +64,30 @@ export function MatchesClient({ matches }: { matches: LoadedMatch[] }) {
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      {/* Keyed on sort only, so changing the order replays the stagger and
+          the list visibly re-forms. Deliberately NOT keyed on the search
+          query — that would restart the animation on every keystroke. */}
+      <RevealGroup key={sort} className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {filtered.map((m) => (
-          <Link key={m.id} href={`/matches/${m.id}`} className="card p-4 hover:shadow-md transition-shadow block">
-            <div className="w-full rounded-xl mb-3 flex items-center justify-center relative"
-              style={{ aspectRatio: "16/9", background: "linear-gradient(135deg,#4F7DF31A,#8B5CF61A)" }}>
-              <Play size={20} className="text-brand" />
-              <span className="absolute top-2 right-2 text-[11px] font-semibold px-2 py-0.5 rounded-full text-white"
-                style={{ background: "linear-gradient(135deg,#4F7DF3,#8B5CF6)" }}>{m.rating}</span>
-            </div>
-            <div className="text-sm font-medium">{m.title}</div>
-            <div className="text-xs text-brand-faint mt-0.5">
-              {m.opponent ? `vs ${m.opponent} · ` : ""}{new Date(m.date).toLocaleDateString()}
-            </div>
-            <div className="flex gap-3 mt-2 text-xs text-brand-muted">
-              <span>{m.kills} K</span><span>{m.blocks} B</span><span>{m.digs} D</span><span>{m.aces} A</span>
-            </div>
-          </Link>
+          <RevealItem key={m.id}>
+            <Link href={`/matches/${m.id}`} className="card card-lift p-4 block h-full">
+              <div className="w-full rounded-xl mb-3 flex items-center justify-center relative"
+                style={{ aspectRatio: "16/9", background: "linear-gradient(135deg,#4F7DF31A,#8B5CF61A)" }}>
+                <Play size={20} className="text-brand" />
+                <span className="absolute top-2 right-2 text-[11px] font-semibold px-2 py-0.5 rounded-full text-white"
+                  style={{ background: "linear-gradient(135deg,#4F7DF3,#8B5CF6)" }}>{m.rating}</span>
+              </div>
+              <div className="text-sm font-medium">{m.title}</div>
+              <div className="text-xs text-brand-faint mt-0.5">
+                {m.opponent ? `vs ${m.opponent} · ` : ""}{new Date(m.date).toLocaleDateString()}
+              </div>
+              <div className="flex gap-3 mt-2 text-xs text-brand-muted">
+                <span>{m.kills} K</span><span>{m.blocks} B</span><span>{m.digs} D</span><span>{m.aces} A</span>
+              </div>
+            </Link>
+          </RevealItem>
         ))}
-      </div>
+      </RevealGroup>
       {!filtered.length && <p className="text-sm text-brand-faint mt-6 text-center">No matches match your search.</p>}
     </div>
   );

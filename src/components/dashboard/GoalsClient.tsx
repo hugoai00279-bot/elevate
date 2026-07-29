@@ -2,6 +2,7 @@
 import { useState } from "react";
 import { Target, Plus, Trash2, Check } from "lucide-react";
 import { Card, SectionHeader } from "./ui";
+import { ProgressBar, RevealGroup, RevealItem } from "./motion";
 
 const METRICS = [
   { key: "kills", label: "Kills (avg/match)" },
@@ -78,13 +79,14 @@ export function GoalsClient({ initialGoals, current, hasMatches }: any) {
           No goals yet — set one above to start tracking your targets.
         </div>
       ) : (
-        <div className="space-y-3">
+        <RevealGroup className="space-y-3">
           {goals.map((g) => {
             const cur = current[g.metric] ?? 0;
             const pct = Math.min(100, Math.round((cur / g.target) * 100));
             const done = cur >= g.target;
             return (
-              <Card key={g.id}>
+              <RevealItem key={g.id}>
+              <Card>
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
                     <span className="text-sm font-medium">{metricLabel(g.metric)}</span>
@@ -103,14 +105,20 @@ export function GoalsClient({ initialGoals, current, hasMatches }: any) {
                   <span>{hasMatches ? `Current: ${cur}` : "No data yet"}</span>
                   <span>Target: {g.target}</span>
                 </div>
-                <div className="h-2 w-full rounded-full overflow-hidden" style={{ background: "#EEF1F8" }}>
-                  <div className="h-full rounded-full transition-all"
-                    style={{ width: `${pct}%`, background: done ? "linear-gradient(90deg,#14B8A6,#0F9488)" : "linear-gradient(90deg,#4F7DF3,#8B5CF6)" }} />
-                </div>
+                {/* Fills from empty on load — a bar rendered straight at its
+                    final width reads as a static graphic, not progress. */}
+                <ProgressBar
+                  pct={pct}
+                  delay={0.12}
+                  background={done
+                    ? "linear-gradient(90deg,#14B8A6,#0F9488)"
+                    : "linear-gradient(90deg,#4F7DF3,#8B5CF6)"}
+                />
               </Card>
+              </RevealItem>
             );
           })}
-        </div>
+        </RevealGroup>
       )}
     </div>
   );

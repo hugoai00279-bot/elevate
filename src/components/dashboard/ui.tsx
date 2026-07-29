@@ -1,20 +1,46 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
+import { useReducedMotion } from "framer-motion";
 
+/**
+ * Counts from wherever the value currently sits up to `target`.
+ *
+ * Animates from the *previous* value rather than always from 0, so a
+ * re-render (filtering, sorting, a stat refresh) tweens smoothly instead
+ * of snapping back to zero and climbing again.
+ *
+ * requestAnimationFrame can't be reached by the reduced-motion CSS rule
+ * in globals.css, so that case is handled explicitly here.
+ */
 export function useCountUp(target: number, duration = 1000, start = true) {
   const [value, setValue] = useState(0);
+  const fromRef = useRef(0);
+  const reduce = useReducedMotion();
+
   useEffect(() => {
     if (!start) return;
+    if (reduce) {
+      fromRef.current = target;
+      setValue(target);
+      return;
+    }
+
+    const from = fromRef.current;
     let raf: number;
     const t0 = performance.now();
     const tick = (now: number) => {
       const p = Math.min(1, (now - t0) / duration);
-      setValue(target * (1 - Math.pow(1 - p, 3)));
+      // Ease-out cubic — fast off the line, glides into the final number.
+      const eased = 1 - Math.pow(1 - p, 3);
+      const next = from + (target - from) * eased;
+      setValue(next);
+      fromRef.current = next;
       if (p < 1) raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  }, [target, duration, start]);
+  }, [target, duration, start, reduce]);
+
   return value;
 }
 
@@ -40,7 +66,10 @@ export function RatingRing({
   const r = (size - 14) / 2;
   const c = 2 * Math.PI * r;
   const offset = c - (animated / 100) * c;
-  const gradId = useRef(`rg-${Math.random().toString(36).slice(2, 8)}`).current;
+  // useId, not Math.random(): this component is server-rendered too, and a
+  // random id differs between the server HTML and the client's first render,
+  // which trips a hydration mismatch.
+  const gradId = `rg${useId().replace(/:/g, "")}`;
 
   return (
     <div className="flex flex-col items-center justify-center">
@@ -53,10 +82,12 @@ export function RatingRing({
             </linearGradient>
           </defs>
           <circle cx={size / 2} cy={size / 2} r={r} stroke="#EEF1F8" strokeWidth="10" fill="none" />
+          {/* The arc is driven frame-by-frame by useCountUp, so it needs no
+              CSS transition of its own — layering one on top would smooth
+              an already-smooth value and make the ring trail the number. */}
           <circle cx={size / 2} cy={size / 2} r={r} stroke={`url(#${gradId})`} strokeWidth="10"
             fill="none" strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
-            transform={`rotate(-90 ${size / 2} ${size / 2})`}
-            style={{ transition: "stroke-dashoffset 0.2s linear" }} />
+            transform={`rotate(-90 ${size / 2} ${size / 2})`} />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-2xl font-semibold">{Math.round(animated)}</span>

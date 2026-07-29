@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { Card, RatingRing, StatTile, SectionHeader, CourtDiagram } from "./ui";
 import { LockedFeature } from "./LockedFeature";
+import { Reveal, RevealGroup, RevealItem } from "./motion";
 
 const CAT_COLOR: Record<string, string> = {
   Kills: "#4F7DF3", Aces: "#F59E0B", Blocks: "#14B8A6", Rallies: "#8B5CF6",
@@ -63,7 +64,8 @@ export function MatchResults({
       )}
 
       {showUpgradePrompt && (
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 px-5 py-4 rounded-2xl"
+        <Reveal delay={0.06}
+          className="flex flex-wrap items-center justify-between gap-3 mb-5 px-5 py-4 rounded-2xl"
           style={{ background: "linear-gradient(135deg,#4F7DF3,#8B5CF6)" }}>
           <div className="text-white">
             <p className="text-sm font-semibold">Want this for your own match?</p>
@@ -73,29 +75,40 @@ export function MatchResults({
             </p>
           </div>
           <Link href="/pricing"
-            className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-full shrink-0"
+            className="press inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2.5 rounded-full shrink-0"
             style={{ background: "white", color: "#3B5FD0" }}>
             <Sparkles size={13} /> Upgrade to analyze your own
           </Link>
-        </div>
+        </Reveal>
       )}
 
-      <div className="grid md:grid-cols-3 gap-4 mb-5">
-        <Card className="flex items-center justify-center">
-          <RatingRing value={stats.rating} label="AI Match Rating" />
-        </Card>
-        <Card className="md:col-span-2">
-          <div className="grid grid-cols-3 gap-4">
-            <StatTile icon={Flame} label="Kills" value={stats.kills} />
-            <StatTile icon={Shield} label="Blocks" value={stats.blocks} />
-            <StatTile icon={Target} label="Digs" value={stats.digs} />
-            <StatTile icon={Zap} label="Aces" value={stats.aces} />
-            <StatTile icon={TrendingUp} label="Attack %" value={stats.attackPct} suffix="%" />
-            <StatTile icon={XIcon} label="Errors" value={stats.errors} />
-          </div>
-        </Card>
-      </div>
+      <RevealGroup className="grid md:grid-cols-3 gap-4 mb-5">
+        <RevealItem className="flex">
+          <Card className="flex items-center justify-center w-full">
+            <RatingRing value={stats.rating} label="AI Match Rating" />
+          </Card>
+        </RevealItem>
+        <RevealItem className="md:col-span-2">
+          <Card className="h-full">
+            <RevealGroup className="grid grid-cols-3 gap-4" stagger={0.045} delay={0.06}>
+              {[
+                { icon: Flame, label: "Kills", value: stats.kills },
+                { icon: Shield, label: "Blocks", value: stats.blocks },
+                { icon: Target, label: "Digs", value: stats.digs },
+                { icon: Zap, label: "Aces", value: stats.aces },
+                { icon: TrendingUp, label: "Attack %", value: stats.attackPct, suffix: "%" },
+                { icon: XIcon, label: "Errors", value: stats.errors },
+              ].map((s) => (
+                <RevealItem key={s.label} y={6}>
+                  <StatTile icon={s.icon} label={s.label} value={s.value} suffix={s.suffix ?? ""} />
+                </RevealItem>
+              ))}
+            </RevealGroup>
+          </Card>
+        </RevealItem>
+      </RevealGroup>
 
+      <Reveal delay={0.16}>
       <Card className="mb-5">
         <h3 className="text-sm font-semibold mb-3">Skill radar</h3>
         <div style={{ width: "100%", height: 260 }}>
@@ -108,8 +121,10 @@ export function MatchResults({
           </ResponsiveContainer>
         </div>
       </Card>
+      </Reveal>
 
-      <div className="grid md:grid-cols-2 gap-4 mb-5">
+      <RevealGroup className="grid md:grid-cols-2 gap-4 mb-5" delay={0.2}>
+        <RevealItem>
         <LockedFeature locked={!f.fullStats} title="Heat map">
           <Card>
             <h3 className="text-sm font-semibold mb-3">Heat map</h3>
@@ -123,6 +138,8 @@ export function MatchResults({
             </CourtDiagram>
           </Card>
         </LockedFeature>
+        </RevealItem>
+        <RevealItem>
         <LockedFeature locked={!f.fullStats} title="Shot chart">
           <Card>
             <h3 className="text-sm font-semibold mb-3">Shot chart</h3>
@@ -135,7 +152,8 @@ export function MatchResults({
             </CourtDiagram>
           </Card>
         </LockedFeature>
-      </div>
+        </RevealItem>
+      </RevealGroup>
 
       {/* Highlights */}
       <SectionHeader title="Highlights" />
@@ -148,9 +166,9 @@ export function MatchResults({
                 <h3 className="text-sm font-semibold">{cat}</h3>
                 <span className="text-xs text-brand-faint">{(clips as any[]).length} clips</span>
               </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <RevealGroup className="grid grid-cols-2 sm:grid-cols-3 gap-3" stagger={0.04}>
                 {(clips as any[]).map((c: any) => (
-                  <div key={c.id} className="rounded-xl overflow-hidden relative flex items-center justify-center"
+                  <RevealItem key={c.id} y={6} className="rounded-xl overflow-hidden relative flex items-center justify-center"
                     style={{ aspectRatio:"16/9", background:`linear-gradient(135deg, ${CAT_COLOR[cat]||"#4F7DF3"}33, ${CAT_COLOR[cat]||"#4F7DF3"}0D)` }}>
                     <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ background:"rgba(255,255,255,0.85)" }}>
                       <Play size={14} style={{ color: CAT_COLOR[cat] || "#4F7DF3" }} />
@@ -158,9 +176,9 @@ export function MatchResults({
                     <span className="absolute bottom-1.5 right-2 text-[10px] font-medium">
                       {Math.floor(c.startSec/60)}:{String(Math.floor(c.startSec%60)).padStart(2,"0")}
                     </span>
-                  </div>
+                  </RevealItem>
                 ))}
-              </div>
+              </RevealGroup>
             </div>
           ))}
         </div>
@@ -171,27 +189,33 @@ export function MatchResults({
         <>
           <SectionHeader title="AI Coach" />
           <LockedFeature locked={!f.aiCoach} title="AI coaching reports">
-            <Card className="mb-4">
-              <div className="flex items-center gap-2 mb-3">
-                <Sparkles size={16} className="text-brand" />
-                <h3 className="text-sm font-semibold">Key takeaway</h3>
-              </div>
-              <p className="text-sm leading-relaxed" style={{ color: "#3A3F4B" }}>{report.summary}</p>
-            </Card>
-            <div className="grid sm:grid-cols-2 gap-4">
-              <Card>
-                <h4 className="text-sm font-semibold mb-2">Keep doing</h4>
-                <ul className="text-sm space-y-2" style={{ color: "#3A3F4B" }}>
-                  {report.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                </ul>
+            <Reveal>
+              <Card className="mb-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Sparkles size={16} className="text-brand" />
+                  <h3 className="text-sm font-semibold">Key takeaway</h3>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "#3A3F4B" }}>{report.summary}</p>
               </Card>
-              <Card>
-                <h4 className="text-sm font-semibold mb-2">Work on</h4>
-                <ul className="text-sm space-y-2" style={{ color: "#3A3F4B" }}>
-                  {report.weaknesses.map((s: string, i: number) => <li key={i}>{s}</li>)}
-                </ul>
-              </Card>
-            </div>
+            </Reveal>
+            <RevealGroup className="grid sm:grid-cols-2 gap-4" delay={0.08}>
+              <RevealItem>
+                <Card className="h-full">
+                  <h4 className="text-sm font-semibold mb-2">Keep doing</h4>
+                  <ul className="text-sm space-y-2" style={{ color: "#3A3F4B" }}>
+                    {report.strengths.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                  </ul>
+                </Card>
+              </RevealItem>
+              <RevealItem>
+                <Card className="h-full">
+                  <h4 className="text-sm font-semibold mb-2">Work on</h4>
+                  <ul className="text-sm space-y-2" style={{ color: "#3A3F4B" }}>
+                    {report.weaknesses.map((s: string, i: number) => <li key={i}>{s}</li>)}
+                  </ul>
+                </Card>
+              </RevealItem>
+            </RevealGroup>
           </LockedFeature>
         </>
       )}

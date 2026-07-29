@@ -6,6 +6,7 @@ import {
 } from "recharts";
 import { Card, RatingRing, StatTile, SectionHeader } from "./ui";
 import { LockedFeature } from "./LockedFeature";
+import { Reveal, RevealGroup, RevealItem } from "./motion";
 
 type Match = { id: string; title: string; opponent: string | null; date: string; rating: number };
 
@@ -37,25 +38,38 @@ export function DashboardClient({
         )}
       </div>
 
-      <div className="grid md:grid-cols-3 gap-4 mb-5">
-        <Card className="flex items-center justify-center">
-          <RatingRing value={avgRating} label="Avg AI Rating" sub="across your season" />
-        </Card>
-        <Card className="md:col-span-2">
-          <div className="grid grid-cols-3 gap-4">
-            <StatTile icon={Flame} label="Kills" value={season.kills} />
-            <StatTile icon={Shield} label="Blocks" value={season.blocks} />
-            <StatTile icon={Target} label="Digs" value={season.digs} />
-            <StatTile icon={Zap} label="Aces" value={season.aces} />
-            <StatTile icon={XIcon} label="Errors" value={season.errors} />
-            <StatTile icon={Play} label="Matches" value={season.count} />
-          </div>
-        </Card>
-      </div>
+      <RevealGroup className="grid md:grid-cols-3 gap-4 mb-5">
+        <RevealItem className="flex">
+          <Card className="flex items-center justify-center w-full">
+            <RatingRing value={avgRating} label="Avg AI Rating" sub="across your season" />
+          </Card>
+        </RevealItem>
+        <RevealItem className="md:col-span-2">
+          <Card className="h-full">
+            {/* Tiles stagger across the grid; each number counts up as its
+                tile lands, so the block resolves as one sweep. */}
+            <RevealGroup className="grid grid-cols-3 gap-4" stagger={0.045} delay={0.06}>
+              {[
+                { icon: Flame, label: "Kills", value: season.kills },
+                { icon: Shield, label: "Blocks", value: season.blocks },
+                { icon: Target, label: "Digs", value: season.digs },
+                { icon: Zap, label: "Aces", value: season.aces },
+                { icon: XIcon, label: "Errors", value: season.errors },
+                { icon: Play, label: "Matches", value: season.count },
+              ].map((s) => (
+                <RevealItem key={s.label} y={6}>
+                  <StatTile icon={s.icon} label={s.label} value={s.value} />
+                </RevealItem>
+              ))}
+            </RevealGroup>
+          </Card>
+        </RevealItem>
+      </RevealGroup>
 
       {/* Demo (Free) plan: the sample match is the thing to do here. */}
       {isDemo && (
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 px-4 py-3.5 rounded-2xl border"
+        <Reveal delay={0.12}
+          className="flex flex-wrap items-center justify-between gap-3 mb-5 px-4 py-3.5 rounded-2xl border"
           style={{ borderColor: "#D9E1FB", background: "rgba(79,125,243,0.06)" }}>
           <div className="text-sm">
             <span className="font-semibold" style={{ color: "#12141C" }}>You&apos;re on the Free demo plan.</span>
@@ -69,11 +83,12 @@ export function DashboardClient({
             </Link>
             <Link href="/pricing" className="text-xs font-semibold text-brand">Upgrade →</Link>
           </div>
-        </div>
+        </Reveal>
       )}
 
       {usage && !usage.isFounder && !isDemo && (
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-5 px-4 py-3 rounded-2xl border"
+        <Reveal delay={0.12}
+          className="flex flex-wrap items-center justify-between gap-3 mb-5 px-4 py-3 rounded-2xl border"
           style={{ borderColor: "#EEF0F5", background: "rgba(79,125,243,0.04)" }}>
           <div className="text-sm">
             <span className="font-semibold" style={{ color: "#12141C" }}>
@@ -87,10 +102,11 @@ export function DashboardClient({
           <Link href="/pricing" className="text-xs font-semibold text-brand">
             {usage.remaining === 0 ? "Get more →" : "Upgrade →"}
           </Link>
-        </div>
+        </Reveal>
       )}
 
       {progress.length > 1 && (
+        <Reveal delay={0.18}>
         <LockedFeature locked={!f.progressTracking} title="Season progress tracking">
           <Card className="mb-5">
             <h3 className="text-sm font-semibold mb-3">Rating progress</h3>
@@ -113,27 +129,29 @@ export function DashboardClient({
             </div>
           </Card>
         </LockedFeature>
+        </Reveal>
       )}
 
       <SectionHeader title="Your matches" />
-      <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <RevealGroup className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4" delay={0.2}>
         {matches.map((m) => (
-          <Link key={m.id} href={`/matches/${m.id}`}
-            className="card p-4 hover:shadow-md transition-shadow block">
-            <div className="w-full rounded-xl mb-3 flex items-center justify-center"
-              style={{ aspectRatio: "16/9", background: "linear-gradient(135deg,#4F7DF31A,#8B5CF61A)" }}>
-              <Play size={20} className="text-brand" />
-            </div>
-            <div className="text-sm font-medium">{m.title}</div>
-            <div className="flex items-center justify-between mt-1">
-              <span className="text-xs text-brand-faint">
-                {new Date(m.date).toLocaleDateString()}
-              </span>
-              <span className="text-xs font-semibold text-brand">{m.rating} rating</span>
-            </div>
-          </Link>
+          <RevealItem key={m.id}>
+            <Link href={`/matches/${m.id}`} className="card card-lift p-4 block h-full">
+              <div className="w-full rounded-xl mb-3 flex items-center justify-center"
+                style={{ aspectRatio: "16/9", background: "linear-gradient(135deg,#4F7DF31A,#8B5CF61A)" }}>
+                <Play size={20} className="text-brand" />
+              </div>
+              <div className="text-sm font-medium">{m.title}</div>
+              <div className="flex items-center justify-between mt-1">
+                <span className="text-xs text-brand-faint">
+                  {new Date(m.date).toLocaleDateString()}
+                </span>
+                <span className="text-xs font-semibold text-brand">{m.rating} rating</span>
+              </div>
+            </Link>
+          </RevealItem>
         ))}
-      </div>
+      </RevealGroup>
     </div>
   );
 }

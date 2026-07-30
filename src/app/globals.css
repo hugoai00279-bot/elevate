@@ -14,14 +14,68 @@ body {
     "Helvetica Neue", Arial, sans-serif;
 }
 
-/* Site-wide ambient mesh — one painted gradient, no stacked opacity divs */
+/* ==================================================================
+   AMBIENT THEME
+   One shared atmosphere for marketing, auth and the app, so signing in
+   feels like walking further into the same building rather than landing
+   on a different site.
+
+   Three layers, cheapest first:
+     1. a painted gradient mesh (static, zero cost)
+     2. ::before — slow drifting aurora, transform-only so it stays on
+        the compositor and never triggers layout
+     3. ::after — fine grain, which keeps large flat gradients from
+        banding on wide displays
+   ================================================================== */
 .ambient-light {
+  position: relative;
+  isolation: isolate; /* keeps the z-index:-1 layers from escaping upward */
   background:
     radial-gradient(1100px 700px at 8% -8%, rgba(79,125,243,0.16), transparent 60%),
     radial-gradient(900px 650px at 100% 0%, rgba(139,92,246,0.14), transparent 55%),
     radial-gradient(800px 700px at 15% 100%, rgba(20,184,166,0.12), transparent 55%),
     radial-gradient(700px 600px at 95% 85%, rgba(245,158,11,0.10), transparent 55%),
     linear-gradient(180deg, #FBFCFF 0%, #F5F7FC 100%);
+}
+.ambient-light::before,
+.ambient-light::after {
+  content: "";
+  position: absolute;
+  inset: -20%;
+  z-index: -1;
+  pointer-events: none;
+}
+.ambient-light::before {
+  background:
+    radial-gradient(520px 420px at 22% 18%, rgba(79,125,243,0.20), transparent 62%),
+    radial-gradient(460px 380px at 78% 12%, rgba(139,92,246,0.18), transparent 60%),
+    radial-gradient(560px 460px at 62% 78%, rgba(20,184,166,0.14), transparent 62%);
+  filter: blur(20px);
+  animation: auroraDrift 42s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.ambient-light::after {
+  inset: 0;
+  opacity: 0.035;
+  mix-blend-mode: multiply;
+  /* Inline SVG turbulence — no network request, no image asset. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+@keyframes auroraDrift {
+  0%   { transform: translate3d(0, 0, 0) scale(1); }
+  50%  { transform: translate3d(2.5%, -2%, 0) scale(1.06); }
+  100% { transform: translate3d(-2%, 2.5%, 0) scale(1.03); }
+}
+
+/* Darker variant for the hero stage, so the 3D scene has depth behind it */
+.ambient-deep {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(800px 600px at 20% 10%, rgba(79,125,243,0.28), transparent 60%),
+    radial-gradient(700px 560px at 85% 20%, rgba(139,92,246,0.26), transparent 58%),
+    radial-gradient(600px 500px at 50% 100%, rgba(20,184,166,0.16), transparent 60%),
+    linear-gradient(165deg, #0C0F1A 0%, #12162A 55%, #0B0D16 100%);
 }
 .ambient-dark {
   background:
@@ -36,6 +90,145 @@ body {
   border: 1px solid #EEF0F5;
   border-radius: 1rem;
   backdrop-filter: blur(8px);
+}
+
+/* ==================================================================
+   SHARED SURFACES & TYPE
+   ================================================================== */
+
+/* Glass panel for use over the dark hero stage. */
+.glass {
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 1rem;
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: 0 20px 50px -24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* Brand gradient text. background-clip needs the transparent fill. */
+.text-gradient {
+  background: linear-gradient(115deg, #4F7DF3 0%, #8B5CF6 45%, #14B8A6 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.text-gradient-light {
+  background: linear-gradient(115deg, #FFFFFF 0%, #C9D8FF 40%, #A9B8FF 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+/* background-clip:text only paints the element's OWN text. If a gradient
+   heading has element children (an animated word span, a <strong>), their
+   text inherits color:transparent but not the gradient, and vanishes.
+   Handing the gradient down keeps nested markup visible. */
+.text-gradient > *,
+.text-gradient-light > * {
+  background-image: inherit;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+
+/* Gradient hairline border via double-background trick — one element,
+   no wrapper div, and it survives border-radius cleanly. */
+.ring-gradient {
+  border: 1px solid transparent;
+  background:
+    linear-gradient(rgba(255,255,255,0.06), rgba(255,255,255,0.02)) padding-box,
+    linear-gradient(135deg, rgba(79,125,243,0.7), rgba(139,92,246,0.35), rgba(20,184,166,0.5)) border-box;
+}
+
+/* Cursor-following spotlight on feature cards. --mx/--my are written by
+   JS as percentages; the fallback keeps it centred before first move. */
+.spotlight { position: relative; overflow: hidden; }
+.spotlight::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transition: opacity 0.35s ease;
+  background: radial-gradient(
+    260px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(79,125,243,0.16),
+    transparent 65%
+  );
+  pointer-events: none;
+}
+.spotlight:hover::before { opacity: 1; }
+
+/* ==================================================================
+   3D STAGE
+   CSS 3D rather than WebGL: no dependency, no canvas, and it composites
+   on the GPU like any other transform.
+   ================================================================== */
+.stage {
+  perspective: 1400px;
+  perspective-origin: 50% 45%;
+}
+.stage-3d { transform-style: preserve-3d; }
+
+/* The volleyball's seams live on a rotating sphere face. */
+@keyframes ballSpin {
+  from { transform: rotate3d(1, 0.6, 0.2, 0deg); }
+  to   { transform: rotate3d(1, 0.6, 0.2, 360deg); }
+}
+.ball-spin { animation: ballSpin 18s linear infinite; }
+
+@keyframes floatY {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50%      { transform: translate3d(0, -12px, 0); }
+}
+.float-y { animation: floatY 6s ease-in-out infinite; will-change: transform; }
+.float-y-slow { animation: floatY 9s ease-in-out infinite; will-change: transform; }
+
+/* Sheen that sweeps a primary button once on hover. */
+@keyframes sheen {
+  from { transform: translateX(-120%) skewX(-18deg); }
+  to   { transform: translateX(220%) skewX(-18deg); }
+}
+.sheen { position: relative; overflow: hidden; }
+.sheen::after {
+  content: "";
+  position: absolute;
+  top: 0; bottom: 0; left: 0;
+  width: 45%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.38), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+}
+.sheen:hover::after { animation: sheen 0.85s ease-out; }
+
+/* Edge-to-edge logo ticker. Duplicate the track in markup and shift by
+   exactly -50% so the loop is seamless. */
+@keyframes marquee {
+  from { transform: translate3d(0, 0, 0); }
+  to   { transform: translate3d(-50%, 0, 0); }
+}
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee 32s linear infinite;
+  will-change: transform;
+}
+.marquee-mask {
+  mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+}
+
+/* Slow conic sweep behind the CTA panel. */
+@keyframes haloSpin { to { transform: rotate(360deg); } }
+.halo::before {
+  content: "";
+  position: absolute;
+  inset: -40%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, rgba(79,125,243,0.28), rgba(139,92,246,0.22), rgba(20,184,166,0.24), rgba(79,125,243,0.28));
+  filter: blur(44px);
+  animation: haloSpin 28s linear infinite;
+  /* Promote to its own layer so the browser blurs once and then only
+     transforms the cached result, instead of re-blurring a very large
+     surface every frame. */
+  will-change: transform;
 }
 
 /* ------------------------------------------------------------------
@@ -79,4 +272,16 @@ button:not(:disabled):active,
   .card-lift:hover { transform: none; }
   button:not(:disabled):active,
   .press:active { transform: none; }
+  /* Kill the looping ambient animations outright rather than running them
+     at 0.001ms, which would leave elements frozen at a random keyframe. */
+  .ambient-light::before,
+  .ball-spin,
+  .float-y,
+  .float-y-slow,
+  .marquee-track,
+  .halo::before {
+    animation: none !important;
+    transform: none !important;
+  }
+  .sheen:hover::after { animation: none !important; }
 }

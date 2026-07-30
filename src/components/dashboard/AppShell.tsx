@@ -27,18 +27,29 @@ export function AppShell({ children, showTeamNav = false }: { children: React.Re
   const router = useRouter();
   const [drawer, setDrawer] = useState(false);
 
-  const NavList = ({ onNav }: { onNav?: () => void }) => (
+  const NavList = ({ onNav, idPrefix = "desktop" }: { onNav?: () => void; idPrefix?: string }) => (
     <nav className="space-y-1">
       {nav.map((item) => {
         const active = pathname === item.href || pathname.startsWith(item.href + "/");
         return (
           <button key={item.href}
             onClick={() => { router.push(item.href); onNav?.(); }}
-            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
-            style={{
-              background: active ? "linear-gradient(135deg,#4F7DF314,#8B5CF614)" : "transparent",
-              color: active ? "#4F7DF3" : "#5B6472",
-            }}>
+            className="relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors"
+            style={{ color: active ? "#4F7DF3" : "#5B6472" }}>
+            {/* Shared layoutId slides the highlight between items, matching
+                the marketing nav. Scoped by idPrefix so the desktop rail
+                and the mobile drawer don't animate into each other. */}
+            {active && (
+              <motion.span
+                layoutId={`${idPrefix}-nav-pill`}
+                className="absolute inset-0 rounded-xl -z-10"
+                style={{
+                  background: "linear-gradient(135deg,#4F7DF31A,#8B5CF61A)",
+                  border: "1px solid rgba(79,125,243,0.14)",
+                }}
+                transition={{ duration: 0.35, ease: EASE }}
+              />
+            )}
             <item.icon size={17} /> {item.label}
           </button>
         );
@@ -115,7 +126,7 @@ export function AppShell({ children, showTeamNav = false }: { children: React.Re
                   </div>
                   <button onClick={() => setDrawer(false)}><X size={18} /></button>
                 </div>
-                <NavList onNav={() => setDrawer(false)} />
+                <NavList onNav={() => setDrawer(false)} idPrefix="drawer" />
               </motion.div>
             </>
           )}

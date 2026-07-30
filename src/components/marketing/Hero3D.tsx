@@ -168,13 +168,21 @@ export function Hero3D() {
             Laid flat by rotateX, then pushed back and down so the ball
             and chips read as floating above it.
 
+            ORIENTATION: after rotateX the plane's local Y axis becomes
+            depth, so we're looking down the length of the court from
+            behind one end line. The court's long axis therefore runs
+            into the screen and every division line — centre line and
+            both attack lines — runs across the width, i.e. horizontally
+            in local coords. Drawing them vertically put the net along
+            the length of the court instead of across it.
+
             Sized to stay inside the stage: perspective widens the near
-            edge, so anything much past ~460px here runs off the right of
-            the column and gets clipped by the section. */}
+            edge, so anything much past ~460px wide here runs off the
+            right of the column and gets clipped by the section. */}
         <div
           className="absolute left-1/2 top-1/2"
           style={{
-            width: 452, height: 248,
+            width: 452, height: 300,
             transform: "translate(-50%,-50%) translateY(64px) translateZ(-30px) rotateX(64deg)",
             transformStyle: "preserve-3d",
           }}
@@ -186,14 +194,17 @@ export function Hero3D() {
             }}>
             {/* Court markings. viewBox matches the plane's pixel size so
                 stroke weights stay even under the perspective squash. */}
-            <svg viewBox="0 0 452 248" className="absolute inset-0 w-full h-full">
-              <rect x="12" y="12" width="428" height="224" fill="none"
+            <svg viewBox="0 0 452 300" className="absolute inset-0 w-full h-full">
+              <rect x="12" y="12" width="428" height="276" fill="none"
                 stroke="rgba(180,205,255,0.42)" strokeWidth="2" rx="4" />
-              <line x1="226" y1="12" x2="226" y2="236"
+              {/* Centre line — the net stands on this one. */}
+              <line x1="12" y1="150" x2="440" y2="150"
                 stroke="rgba(140,180,255,0.75)" strokeWidth="2.5" />
-              <line x1="154" y1="12" x2="154" y2="236"
+              {/* Attack lines, one third of the way out from the centre
+                  line on each side (3m of each 9m half). */}
+              <line x1="12" y1="104" x2="440" y2="104"
                 stroke="rgba(180,205,255,0.22)" strokeWidth="1.5" strokeDasharray="7 7" />
-              <line x1="298" y1="12" x2="298" y2="236"
+              <line x1="12" y1="196" x2="440" y2="196"
                 stroke="rgba(180,205,255,0.22)" strokeWidth="1.5" strokeDasharray="7 7" />
             </svg>
             {/* Sheen sweeping the far end, sells a reflective surface */}
@@ -203,11 +214,15 @@ export function Hero3D() {
         </div>
 
         {/* ---- Net --------------------------------------------------
-            A vertical plane on the centre line. The repeating gradients
-            are the mesh; the bright top edge is the tape. */}
+            An upright plane standing across the court on the centre
+            line: it faces the camera, so its width matches the court's
+            width (sideline to sideline, 428) and its base lands on the
+            centre line at translateY(26 + 74/2) = 63 ≈ the court
+            plane's own centre. The repeating gradients are the mesh;
+            the bright top edge is the tape. */}
         <div className="absolute left-1/2 top-1/2"
           style={{
-            width: 300, height: 74,
+            width: 428, height: 74,
             transform: "translate(-50%,-50%) translateY(26px) translateZ(-30px)",
             transformStyle: "preserve-3d",
           }}>

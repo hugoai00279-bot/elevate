@@ -19,11 +19,13 @@ import { EASE } from "@/components/motion";
 // If we ever want real geometry — a ball with actual depth, shadows that
 // respond to a light — that's the moment to add the dependency.
 //
-// The scene tilts toward the pointer. Rotation is capped at 7 degrees:
-// past roughly 10 the court reads as "wobbling" rather than "solid".
+// The scene tilts toward the pointer.
 // ====================================================================
 
-const MAX_TILT = 7;
+// Tilt ceiling in degrees. 7 was too reserved to notice; 16 makes the
+// court clearly swing with the cursor while still returning to a
+// readable flat-on view at centre.
+const MAX_TILT = 16;
 
 /** Floating stat chip. `z` sets its depth, which drives parallax strength. */
 function StatChip({
@@ -36,7 +38,7 @@ function StatChip({
       className={`absolute ${float} ${className}`}
       style={{ transform: `translateZ(${z}px)`, transformStyle: "preserve-3d" }}
     >
-      <div className="glass ring-gradient flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl">
+      <div className="glass-solid flex items-center gap-2.5 px-3.5 py-2.5 rounded-2xl">
         <span className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
           style={{ background: "linear-gradient(135deg, rgba(79,125,243,0.9), rgba(139,92,246,0.9))" }}>
           <Icon size={15} className="text-white" />
@@ -104,24 +106,36 @@ export function Hero3D() {
   const py = useMotionValue(0);
 
   // Spring the values so the scene glides after the cursor instead of
-  // snapping to it frame by frame.
-  const sx = useSpring(px, { stiffness: 90, damping: 20, mass: 0.6 });
-  const sy = useSpring(py, { stiffness: 90, damping: 20, mass: 0.6 });
+  // snapping to it frame by frame. Stiffer and lighter than before so the
+  // bigger tilt still feels like it's tracking the cursor rather than
+  // lagging behind it.
+  const sx = useSpring(px, { stiffness: 140, damping: 18, mass: 0.4 });
+  const sy = useSpring(py, { stiffness: 140, damping: 18, mass: 0.4 });
 
   const rotateY = useTransform(sx, [-0.5, 0.5], [-MAX_TILT, MAX_TILT]);
   const rotateX = useTransform(sy, [-0.5, 0.5], [MAX_TILT, -MAX_TILT]);
 
+  // Cached stage bounds. Reading getBoundingClientRect() inside the move
+  // handler forced a synchronous layout on every single mousemove, which
+  // is exactly the kind of per-event work that makes a page feel sticky.
+  // Measured once on enter instead — the stage doesn't move while hovering.
+  const rect = useRef<DOMRect | null>(null);
+
+  function onPointerEnter() {
+    rect.current = ref.current?.getBoundingClientRect() ?? null;
+  }
+
   function onPointerMove(e: React.PointerEvent) {
     // Coarse pointers (touch) would jump the scene on tap — skip them.
     if (reduce || e.pointerType !== "mouse") return;
-    const el = ref.current;
-    if (!el) return;
-    const r = el.getBoundingClientRect();
+    const r = rect.current;
+    if (!r) return;
     px.set((e.clientX - r.left) / r.width - 0.5);
     py.set((e.clientY - r.top) / r.height - 0.5);
   }
 
   function onPointerLeave() {
+    rect.current = null;
     px.set(0);
     py.set(0);
   }
@@ -129,6 +143,7 @@ export function Hero3D() {
   return (
     <div
       ref={ref}
+      onPointerEnter={onPointerEnter}
       onPointerMove={onPointerMove}
       onPointerLeave={onPointerLeave}
       className="stage relative w-full"

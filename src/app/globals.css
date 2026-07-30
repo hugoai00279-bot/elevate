@@ -37,27 +37,35 @@ body {
     radial-gradient(700px 600px at 95% 85%, rgba(245,158,11,0.10), transparent 55%),
     linear-gradient(180deg, #FBFCFF 0%, #F5F7FC 100%);
 }
+/* Both layers are FIXED, not absolute, and so are exactly one viewport
+   in size. As absolute layers they stretched to the full scroll height —
+   on a long page that meant compositing a several-thousand-pixel texture
+   on every paint, which is what made navigation feel heavy. */
 .ambient-light::before,
 .ambient-light::after {
   content: "";
-  position: absolute;
-  inset: -20%;
+  position: fixed;
+  inset: -15%;
   z-index: -1;
   pointer-events: none;
 }
 .ambient-light::before {
   background:
-    radial-gradient(520px 420px at 22% 18%, rgba(79,125,243,0.20), transparent 62%),
-    radial-gradient(460px 380px at 78% 12%, rgba(139,92,246,0.18), transparent 60%),
-    radial-gradient(560px 460px at 62% 78%, rgba(20,184,166,0.14), transparent 62%);
-  filter: blur(20px);
+    radial-gradient(520px 420px at 22% 18%, rgba(79,125,243,0.18), transparent 62%),
+    radial-gradient(460px 380px at 78% 12%, rgba(139,92,246,0.16), transparent 60%),
+    radial-gradient(560px 460px at 62% 78%, rgba(20,184,166,0.13), transparent 62%);
+  /* No blur filter: radial gradients are already soft, and blurring this
+     layer forced a full repaint every frame of the drift animation. The
+     animation is now transform-only, which stays on the compositor. */
   animation: auroraDrift 42s ease-in-out infinite alternate;
   will-change: transform;
 }
 .ambient-light::after {
   inset: 0;
-  opacity: 0.035;
-  mix-blend-mode: multiply;
+  /* Plain alpha overlay rather than mix-blend-mode: multiply. A blend
+     mode forces the browser to re-composite the entire stacking context
+     behind it whenever anything above repaints. */
+  opacity: 0.028;
   /* Inline SVG turbulence — no network request, no image asset. */
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
 }
@@ -89,20 +97,36 @@ body {
   background: rgba(255,255,255,0.92);
   border: 1px solid #EEF0F5;
   border-radius: 1rem;
-  backdrop-filter: blur(8px);
+  /* No backdrop-filter. This class is on every card in the app, and each
+     instance is a separate expensive blur pass — dozens of them on a
+     populated dashboard. At 92% opaque white almost nothing shows through
+     the blur anyway, so the cost bought no visible effect. */
 }
 
 /* ==================================================================
    SHARED SURFACES & TYPE
    ================================================================== */
 
-/* Glass panel for use over the dark hero stage. */
+/* Glass panel for use over the dark hero stage. Static elements only —
+   backdrop-filter is costly, so anything that moves should use
+   .glass-solid instead. */
 .glass {
   background: rgba(255,255,255,0.07);
   border: 1px solid rgba(255,255,255,0.14);
   border-radius: 1rem;
-  backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(12px);
   box-shadow: 0 20px 50px -24px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+/* Same look, no backdrop-filter. For elements inside the animated 3D
+   scene: a backdrop blur there is re-rendered on every frame of the tilt
+   (and browsers handle backdrop-filter poorly inside preserve-3d anyway).
+   Over the dark court an opaque translucent fill is indistinguishable. */
+.glass-solid {
+  background: linear-gradient(145deg, rgba(60,78,140,0.72), rgba(30,40,80,0.78));
+  border: 1px solid rgba(255,255,255,0.14);
+  border-radius: 1rem;
+  box-shadow: 0 20px 50px -24px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.12);
 }
 
 /* Brand gradient text. background-clip needs the transparent fill. */
@@ -243,11 +267,14 @@ body {
 .card-lift {
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
               box-shadow 0.22s cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform;
 }
 .card-lift:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 28px -14px rgba(20, 22, 32, 0.22);
+  /* will-change only while hovering. Declaring it unconditionally
+     permanently promoted a layer for every card in a grid — dozens of
+     idle compositor layers eating GPU memory for a hover effect. */
+  will-change: transform;
 }
 .card-lift:active {
   transform: translateY(-1px) scale(0.995);
